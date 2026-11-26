@@ -138,7 +138,24 @@ function Plot({model, chambers, word, zoom, camera, setCamera, choose, cross}) {
   </figure>;
 }
 
+function ShortestGallery({word, destination, onStep}) {
+  if (!destination) return null;
+  const steps = ["", ...Array.from(destination, (_, index) => destination.slice(0, index + 1))];
+  return <details className="gallery-route">
+    <summary>Shortest gallery</summary>
+    <ol className="gallery-steps" role="list">
+      {steps.map(step => <li key={step}>
+        <button type="button" aria-current={step === word ? "step" : undefined}
+          aria-label={step ? "Step " + step.length + ", " + step.split("").join(" ") + " C" : "Fundamental chamber C"}
+          onClick={() => onStep(step)}>{step.slice(-1) || "C"}</button>
+      </li>)}
+    </ol>
+    <p>Each letter crosses one wall. Braid relations can give other shortest galleries.</p>
+  </details>;
+}
+
 function Controls({model, view, count, neighbors, update, choose, changeModel}) {
+  const destination = view.destination ?? view.word;
   return <aside aria-label="Chamber controls">
     <div className="panel">
       <label htmlFor="model">Coxeter example</label>
@@ -154,7 +171,7 @@ function Controls({model, view, count, neighbors, update, choose, changeModel}) 
       <input id="depth" type="range" min="0" max={model.max} value={view.depth}
         onChange={event => {
           const depth = Number(event.target.value);
-          update({depth, word: view.word.length <= depth ? view.word : ""});
+          update({depth, word: view.word.length <= depth ? view.word : "", destination: null});
         }} />
       <p id="count">{count} {count === 1 ? "chamber" : "chambers"}
         {model.family === "Spherical" ? " in gallery" : " drawn"}</p>
@@ -178,6 +195,8 @@ function Controls({model, view, count, neighbors, update, choose, changeModel}) 
       </div>
       <div className="tools"><button type="button" id="home" disabled={!view.word}
         onClick={() => choose("")}>Home chamber</button></div>
+      <ShortestGallery word={view.word} destination={destination}
+        onStep={word => update({word, destination})} />
       <p>{view.word.length === model.max && !["Finite dihedral", "Spherical"].includes(model.family)
         ? "Gallery limit reached. Cross back or select another chamber."
         : "Click a chamber, cross a wall, or focus the plot and use the generator keys."}</p>
@@ -309,7 +328,9 @@ function App() {
   const neighbors = graph.byWord.get(view.word).neighbors;
   const update = patch => setView(current => ({...current, ...patch}));
   const choose = word => {
-    if (word !== undefined) setView(current => ({...current, word, depth: Math.max(current.depth, word.length)}));
+    if (word !== undefined) setView(current => ({
+      ...current, word, depth: Math.max(current.depth, word.length), destination: null
+    }));
   };
 
   useEffect(() => {

@@ -67,6 +67,11 @@
   details p { margin: .75em 0; }
   details ul { padding-inline-start: 1.35em; }
   details li + li { margin-top: .35em; }
+  .gallery-route { padding: 8px; margin-top: 10px; font-size: .875rem; }
+  .gallery-steps { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 8px 0 0; padding: 0; }
+  .gallery-steps li + li { margin: 0; }
+  .gallery-steps button { min-width: 32px; font-family: ui-monospace, monospace; }
+  .gallery-steps [aria-current="step"] { background: #e2eee6; border-color: var(--accent); font-weight: 700; }
   code { font-family: ui-monospace, monospace; font-size: .94em; }
   @media (max-width: 700px) {
     .viewer { grid-template-columns: 1fr; }

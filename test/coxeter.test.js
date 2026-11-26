@@ -42,6 +42,10 @@ for (const model of examples) {
     const signatures = new Set();
     for (const chamber of list) {
       assert.equal(chamber.word.length <= model.max, true);
+      if (chamber.word) {
+        const prefix = byWord.get(chamber.word.slice(0, -1));
+        assert.equal(prefix?.neighbors[chamber.word.at(-1)], chamber.word);
+      }
       const directions = chamber.rays.map(ray =>
         ray.map(x => Math.round(x / Math.hypot(...ray) * 1e13)).join(","));
       const signature = directions.sort().join(";");
