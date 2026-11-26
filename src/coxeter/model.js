@@ -40,6 +40,8 @@ function spherical(id, title, [st, tu, us], order, max) {
 }
 
 export const examples = [
+  model("a1", "A₁ · one mirror", "Finite line", [[1]],
+    "The origin is the mirror. The two chambers cover the dual line.", {depth: 1, max: 1}),
   dihedral("orthogonal", "A₁ × A₁ · m = 2", 2),
   dihedral("a2", "A₂ · m = 3", 3),
   dihedral("b2", "B₂ · m = 4", 4),

@@ -39,6 +39,7 @@ export function exampleFormulae(example) {
     tex`m_{${a}${b}}=${order(example.exponents[i][i + k + 1])}`)).join(tex`,\quad `);
   const rows = walls.map((_, i) => walls.map((_, j) => gramEntry(example, i, j)).join(" & "));
   const matrix = tex`B=\begin{pmatrix}${rows.join(tex`\\`)}\end{pmatrix}`;
+  if (example.rank === 1) return { relations: "s^2=1", matrix };
   if (example.rank === 2) return { relations, matrix,
     angle: example.family === "Finite dihedral" ? piFraction(1, example.exponents[0][1]) : null };
 

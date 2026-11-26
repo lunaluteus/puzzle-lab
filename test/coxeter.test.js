@@ -76,6 +76,10 @@ for (const model of examples) {
         }
       }
     }
+    if (model.rank === 1) {
+      assert.deepEqual(list.map(({rays}) => rays), [[[1]], [[-1]]]);
+      assert.deepEqual(buildGallery(model).countsByLength, [1, 1]);
+    }
     if (model.family === "Finite dihedral") assert.equal(list.length, 2 * model.exponents[0][1]);
     if (model.rank === 2 && limitRays(model)) assert.equal(list.length, 1 + 2 * model.max);
   });

@@ -80,7 +80,8 @@ function Plot({model, chambers, word, zoom, camera, setCamera, choose, cross}) {
 
   return <figure>
     <canvas id="plot" ref={canvas} tabIndex="0"
-      className={spherical ? "sphere" : undefined} data-dragging={previewCamera !== null}
+      className={spherical ? "sphere" : model.rank === 1 ? "dual-line" : undefined}
+      data-dragging={previewCamera !== null}
       aria-label={spherical
         ? "Coxeter chambers. Drag or use the arrow keys to rotate. Tap or click to select."
         : "Coxeter chambers. Click a chamber or press a generator key to cross a wall."}
@@ -226,7 +227,7 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         onClick={() => choose("")}>Home chamber</button></div>
       <ShortestGallery model={model} word={view.word} destination={destination}
         onStep={word => update({word, destination})} />
-      <p>{view.word.length === model.max && !["Finite dihedral", "Spherical"].includes(model.family)
+      <p>{view.word.length === model.max && !["Finite line", "Finite dihedral", "Spherical"].includes(model.family)
         ? "Gallery limit reached. Cross back or select another chamber."
         : "Click a chamber, cross a wall, or focus the plot and use the generator keys."}</p>
     </div>
@@ -234,7 +235,8 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
 }
 
 function Diagram({model}) {
-  const vertices = model.rank === 3 ? [[90, 14], [24, 90], [156, 90]] : [[33, 52], [147, 52]];
+  const vertices = model.rank === 3 ? [[90, 14], [24, 90], [156, 90]]
+    : model.rank === 2 ? [[33, 52], [147, 52]] : [[90, 52]];
   const walls = wallNames(model);
   const edges = walls.flatMap((_, i) => walls.slice(i + 1).map((_, k) => [i, i + k + 1]))
     .filter(([i, j]) => model.exponents[i][j] !== 2);
@@ -263,8 +265,8 @@ function Formula({latex, label}) {
 function Inspector({model}) {
   const {relations, matrix, angles, area, covector, angle} = exampleFormulae(model);
   const spherical = model.family === "Spherical";
-  const signature = {"Finite dihedral": "Positive definite", Spherical: "Positive definite", Affine: "Positive semidefinite",
-    Indefinite: "Signature (1, 1)", Hyperbolic: "Signature (2, 1)"};
+  const signature = {"Finite line": "Positive definite", "Finite dihedral": "Positive definite", Spherical: "Positive definite",
+    Affine: "Positive semidefinite", Indefinite: "Signature (1, 1)", Hyperbolic: "Signature (2, 1)"};
   return <section className="inspector" aria-label="Coxeter data">
     <div className="panel data">
       <h2>Coxeter diagram</h2>
@@ -277,8 +279,9 @@ function Inspector({model}) {
       <p>{signature[model.family]}. Generator order {wallNames(model).join(", ")}.</p>
     </div>
     <div className="panel data">
-      <h2>{spherical ? "Sphere of rays" : angles ? "Projective slice" : "The dual plane"}</h2>
-      {angles ? <>
+      <h2>{spherical ? "Sphere of rays" : angles ? "Projective slice" : model.rank === 1 ? "The dual line" : "The dual plane"}</h2>
+      {model.rank === 1 ? <p>The positive half-line is the fundamental chamber. Reflecting across zero gives the other half-line. Both include zero.</p>
+      : angles ? <>
         <p>Intrinsic corner angles <Formula latex={angles} /></p>
         {model.family === "Hyperbolic" &&
           <p>Hyperbolic area <Formula latex={area} /> at curvature −1.</p>}
@@ -301,7 +304,7 @@ function Notes() {
       of their product. A label of 2 means the reflections commute, so the diagram omits that edge.
       An irreducible system has a connected diagram.</p>
     <p><strong>Rank one.</strong> A₁ consists of a single reflection and the identity.
-      The viewer starts at rank two.</p>
+      Its chambers are the two closed half-lines. <a href="?model=a1">Try A₁</a>.</p>
     <p><strong>Rank two.</strong> The single label determines the dihedral system <Formula latex={mathNotes.dihedral} />.
       The finite presets run from <Formula latex={mathNotes.dihedralPresets} />.
       With <Formula latex={mathNotes.infiniteDihedral} />, the presets use the same infinite dihedral group
@@ -380,7 +383,7 @@ function App() {
     <header>
       <a href="index.html">Puzzle Lab</a>
       <h1>The Tits Cone</h1>
-      <p>Reflect chambers in the dual plane, on the sphere of rays, and in Euclidean or hyperbolic slices.</p>
+      <p>Reflect chambers on a line, in the dual plane, on the sphere of rays, and in Euclidean or hyperbolic slices.</p>
     </header>
     <div className="viewer">
       <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}

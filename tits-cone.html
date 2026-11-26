@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="An interactive view of Tits cones and Coxeter chambers in ranks two and three.">
+<meta name="description" content="An interactive view of Tits cones and Coxeter chambers in ranks one to three.">
 <title>The Tits Cone · Luna's Puzzle Lab</title>
 <style>
   :root {
@@ -27,6 +27,7 @@
   .viewer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(226px, 266px); gap: 14px; align-items: start; }
   figure { margin: 0; min-width: 0; }
   canvas { display: block; width: 100%; aspect-ratio: 1.16; max-height: min(68vh, 620px); background: var(--plot); border-radius: 12px; cursor: crosshair; touch-action: manipulation; }
+  canvas.dual-line { height: 150px; }
   canvas.sphere { cursor: grab; touch-action: none; }
   canvas.sphere[data-dragging="true"] { cursor: grabbing; }
   figcaption { display: flex; gap: 6px 16px; flex-wrap: wrap; padding: 10px 2px 0; color: var(--muted); font-size: .82rem; }

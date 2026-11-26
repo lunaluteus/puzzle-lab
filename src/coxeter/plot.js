@@ -80,6 +80,34 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
     ctx.fillText(label, x, y);
   }
 
+  if (model.rank === 1) {
+    const {x, y, width} = view;
+    const extent = x - 24;
+    line([x - extent, y], [x + extent, y], palette.line);
+    for (const chamber of chambers) {
+      const direction = Math.sign(chamber.rays[0][0]);
+      const end = x + direction * extent;
+      const color = chamber.word === word ? palette.current
+        : chamber.word === "" ? palette.fundamental : palette.line;
+      line([x, y], [end, y], color, 5);
+      ctx.beginPath();
+      ctx.moveTo(end, y);
+      ctx.lineTo(end - direction * 9, y - 6);
+      ctx.lineTo(end - direction * 9, y + 6);
+      ctx.fillStyle = color;
+      ctx.fill();
+      text(chamber.word ? "sC" : "C", x + direction * extent / 2, y - 22, palette.label);
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, tau);
+    ctx.fillStyle = palette.label;
+    ctx.fill();
+    text("0", x, y + 18, palette.label);
+    text("xₛ", width - 24, y + 18, palette.label);
+    return px => ({word: Math.abs(px - x) < 3 ? null
+      : chambers.find(chamber => Math.sign(chamber.rays[0][0]) === Math.sign(px - x))?.word ?? null});
+  }
+
   function rayEnd(angle, distance) {
     return [view.x + distance * Math.cos(angle), view.y + distance * Math.sin(angle)];
   }
