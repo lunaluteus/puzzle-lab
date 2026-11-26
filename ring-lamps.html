@@ -69,6 +69,8 @@
     background: #f1c66e;
     box-shadow: 0 0 18px #f1c66e55;
   }
+  .lamp.preview::after { content: ""; position: absolute; inset: 3px; border: 2px solid #9adcea; border-radius: 50%; pointer-events: none; }
+  .lamp.preview[aria-pressed="true"]::after { border-color: #275d65; }
   .lamp.hint { outline: 3px dashed #daf2a6; outline-offset: 3px; }
   .lamp.parity { outline: 3px dotted #9adcea; outline-offset: 3px; }
   .lamp.hint:focus-visible, .lamp.parity:focus-visible { outline-style: solid; }
@@ -286,6 +288,7 @@ let draft = null;
 let history = [];
 let lamps = [];
 let windows = [];
+let hoveredLamp = null;
 
 function fillSpanChoices(preferred) {
   const options = Array.from({ length: size }, (_, i) => {
@@ -298,6 +301,14 @@ function fillSpanChoices(preferred) {
   span = Number(spanControl.value);
 }
 
+function renderPreview() {
+  const active = hoveredLamp ?? document.activeElement;
+  const index = lamps.indexOf(active);
+  const effect = draft === null && index !== -1 && (hoveredLamp || active.matches(":focus-visible"))
+    ? windows[index] : 0;
+  lamps.forEach((lamp, i) => lamp.classList.toggle("preview", Boolean(effect & (1 << i))));
+}
+
 function render(message = "", suggested = -1, parityGroup = 0) {
   const editing = draft !== null;
   const displayed = draft ?? lights;
@@ -305,6 +316,7 @@ function render(message = "", suggested = -1, parityGroup = 0) {
     const on = Boolean(displayed & (1 << i));
     const inGroup = Boolean(parityGroup & (1 << i));
     lamp.setAttribute("aria-label", `${i + 1} 号灯${inGroup ? "，奇偶性检查组" : ""}`);
+    lamp.setAttribute("aria-description", editing ? "只切换这一盏灯" : lamp.dataset.playDescription);
     lamp.setAttribute("aria-pressed", String(on));
     lamp.classList.toggle("hint", i === suggested);
     lamp.classList.toggle("parity", inGroup);
@@ -320,6 +332,12 @@ function render(message = "", suggested = -1, parityGroup = 0) {
   const announcement = editing ? "逐盏设置亮灭，然后点「开始解题」。"
     : lights === 0 ? `全关了！用了 ${history.length} 次。` : message;
   if (status.textContent !== announcement) status.textContent = announcement;
+  const rule = ruleControl.value === "spaced"
+    ? "点第 i 盏灯会翻转第 i、i+1、i+3 盏，编号绕回一圈。"
+    : "点一盏灯会从它开始顺时针翻转连续几盏。";
+  ruleDescription.textContent = editing ? "编辑开局时，每次只切换选中的一盏灯。"
+    : rule + "试着关掉所有灯。用鼠标指向或用键盘聚焦，可以预览这一步。";
+  renderPreview();
 }
 
 function start(mask, message = "") {
@@ -356,6 +374,7 @@ function toggleLamp(i) {
 }
 
 function installBoard() {
+  hoveredLamp = null;
   lamps.forEach(lamp => lamp.remove());
   lamps = [];
   const radius = 39;
@@ -364,17 +383,17 @@ function installBoard() {
   const spaced = ruleControl.value === "spaced";
   const offsets = spaced ? [0, 1, 3] : Array.from({ length: span }, (_, i) => i);
   spanControl.parentElement.hidden = spaced;
-  ruleDescription.textContent = spaced
-    ? "点第 i 盏灯，会翻转第 i、i+1、i+3 盏。编号绕回一圈。"
-    : "点一盏灯，从它开始顺时针翻转连续几盏。试着关掉所有灯。";
   windows = [];
   for (let i = 0; i < size; i++) {
-    windows.push(offsets.reduce((mask, offset) => mask ^ (1 << ((i + offset) % size)), 0));
+    const targets = offsets.map(offset => (i + offset) % size);
+    windows.push(targets.reduce((mask, target) => mask ^ (1 << target), 0));
     const angle = 2 * Math.PI * i / size;
     const lamp = document.createElement("button");
     lamp.type = "button";
     lamp.className = "lamp";
     lamp.textContent = String(i + 1);
+    lamp.dataset.playDescription = targets.length === size ? "翻转全部灯"
+      : `翻转 ${targets.map(target => target + 1).join("、")} 号灯`;
     lamp.style.setProperty("--x", `${50 + radius * Math.sin(angle)}%`);
     lamp.style.setProperty("--y", `${50 - radius * Math.cos(angle)}%`);
     lamp.addEventListener("click", () => toggleLamp(i));
@@ -409,6 +428,23 @@ function startChallenge(random = false) {
   installBoard();
   start(random ? randomChallengePuzzle() : challengePuzzle, challengePrompt);
 }
+
+board.addEventListener("pointermove", event => {
+  if (event.pointerType === "touch") return;
+  const lamp = event.target.closest(".lamp");
+  if (lamp === hoveredLamp) return;
+  hoveredLamp = lamp;
+  renderPreview();
+});
+board.addEventListener("pointerleave", () => {
+  hoveredLamp = null;
+  renderPreview();
+});
+board.addEventListener("focusin", event => {
+  if (event.target.matches(":focus-visible")) hoveredLamp = null;
+  renderPreview();
+});
+board.addEventListener("focusout", () => queueMicrotask(renderPreview));
 
 sizeControl.addEventListener("change", () => {
   size = Number(sizeControl.value);
