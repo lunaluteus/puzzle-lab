@@ -276,17 +276,21 @@ function ShortestGallery({model, word, destination, followingGallery, onStep, ro
   </details>;
 }
 
-function GalleryGrowth({counts, depth}) {
+function GalleryGrowth({counts, depth, changeDepth}) {
   const peak = Math.max(...counts);
   const labels = counts.map((count, length) =>
     "Length " + length + ", " + count + (count === 1 ? " chamber" : " chambers"));
   return <details className="gallery-growth">
     <summary>Chambers by length</summary>
+    <p>Choose a bar to set the gallery depth.</p>
     <p aria-live="polite">{labels[depth]}</p>
-    <div className="growth-chart" role="img" aria-label={labels.join(". ")}>
-      {counts.map((count, length) => <span key={length} className="growth-bar"
-        title={labels[length]} data-highlight={length === depth}
-        style={{height: count ? "max(1px, " + 100 * count / peak + "%)" : 0}} />)}
+    <div className="growth-chart" role="radiogroup" aria-label="Gallery depth by word length">
+      {counts.map((count, length) => <label key={length} className="growth-column" title={labels[length]}>
+        <input type="radio" name="growth-depth" value={length} checked={length === depth}
+          aria-label={labels[length]} onChange={() => changeDepth(length)} />
+        <span className="growth-bar" aria-hidden="true"
+          style={{height: count ? "max(1px, " + 100 * count / peak + "%)" : 0}} />
+      </label>)}
     </div>
     <div className="growth-axis" aria-hidden="true"><span>0</span><span>Word length</span><span>{counts.length - 1}</span></div>
   </details>;
@@ -296,6 +300,7 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
   const destination = view.destination ?? view.word;
   const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
     model, new URL(location.pathname, location.href)).href : null;
+  const changeDepth = depth => update({depth, word: view.word.length <= depth ? view.word : "", destination: null});
   return <aside aria-label="Chamber controls">
     <div className="panel">
       <label htmlFor="model">Coxeter example</label>
@@ -346,13 +351,10 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         Gallery depth <output id="depth-value">{view.depth}</output>
       </label>
       <input id="depth" type="range" min="0" max={model.max} value={view.depth}
-        onChange={event => {
-          const depth = Number(event.target.value);
-          update({depth, word: view.word.length <= depth ? view.word : "", destination: null});
-        }} />
+        onChange={event => changeDepth(Number(event.target.value))} />
       <p id="count">{count} {count === 1 ? "chamber" : "chambers"}
         {model.family === "Spherical" ? " in gallery" : " drawn"}</p>
-      <GalleryGrowth counts={countsByLength} depth={view.depth} />
+      <GalleryGrowth counts={countsByLength} depth={view.depth} changeDepth={changeDepth} />
       {model.rank === 3 && <>
         <label className="depth-label" htmlFor="zoom">Zoom <output>{view.zoom}×</output></label>
         <input id="zoom" type="range" min="1" max="4" step="0.25" value={view.zoom}
