@@ -25,7 +25,7 @@
   h1 { font: 500 clamp(2.8rem, 8vw, 6rem)/1 Georgia, serif; letter-spacing: -.07em; margin: 14px 0 9px; }
   header p { margin: 0 0 21px; color: var(--muted); }
   .viewer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(226px, 266px); gap: 14px; align-items: start; }
-  figure { margin: 0; min-width: 0; }
+  figure { position: relative; margin: 0; min-width: 0; }
   canvas { display: block; width: 100%; aspect-ratio: 1.16; max-height: min(68vh, 620px); background: var(--plot); border-radius: 12px; cursor: crosshair; touch-action: manipulation; }
   canvas.dual-line { height: 150px; }
   canvas.sphere { cursor: grab; touch-action: none; }
@@ -53,9 +53,15 @@
   button { min-height: 36px; padding: 6px 8px; cursor: pointer; }
   button:disabled { opacity: .48; cursor: default; }
   button:enabled:hover, select:hover { border-color: var(--accent); }
+  .plot-wall { position: absolute; transform: translate(-50%, -50%); width: 28px; height: 28px;
+    min-height: 0; padding: 0; border-color: #9ab3b9; background: #14232d; color: #e2eeee;
+    font: 700 .88rem/1 system-ui, sans-serif; }
+  .plot-wall:enabled:hover { border-color: #e2eeee; background: #315059; }
+  .plot-wall:disabled { opacity: 1; color: #a6b6bd; border-color: #66868d; }
   a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-visible, summary:focus-visible {
     outline: 3px solid #146d63; outline-offset: 3px;
   }
+  .plot-wall:focus-visible { outline-color: #fff6dd; outline-offset: 1px; }
   .depth-label { margin-top: 14px; display: flex; justify-content: space-between; gap: 6px; }
   .projection-control { margin-top: 14px; }
   input[type=range] { width: 100%; margin: 6px 0 0; accent-color: var(--accent); }

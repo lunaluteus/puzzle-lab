@@ -84,24 +84,28 @@ function PointProbe({model, point, euclidean, setPoint}) {
   </>;
 }
 
-function Plot({model, chambers, word, zoom, camera, projection, coordinates, point, setPoint, setCamera, choose, cross}) {
+function Plot({model, chambers, word, zoom, camera, projection, coordinates, point, setPoint, setCamera, choose, cross, neighbors}) {
   const canvas = useRef(null);
   const pick = useRef(null);
   const drag = useRef(null);
   const [previewCamera, setPreviewCamera] = useState(null);
+  const [plotWalls, setPlotWalls] = useState([]);
+  const affineProduct = model === affineDihedralProduct;
   const spherical = model.family === "Spherical";
   const euclidean = model.family === "Finite dihedral" && coordinates === "euclidean";
   const plotCamera = previewCamera ?? camera;
 
   useLayoutEffect(() => {
     const redraw = () => {
-      pick.current = drawPlot(canvas.current, model, chambers, word, {zoom, point, camera: plotCamera, projection, coordinates});
+      pick.current = drawPlot(canvas.current, model, chambers, word, {
+        zoom, point, camera: plotCamera, projection, coordinates, onWalls: affineProduct ? setPlotWalls : undefined
+      });
     };
     redraw();
     const observer = new ResizeObserver(redraw);
     observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates]);
+  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates, affineProduct]);
 
   const centeredCamera = () => sphereCamera(chambers.find(chamber => chamber.word === word).rays.map(sphere(model)));
 
@@ -165,6 +169,9 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
           cross(s);
         }
       }} />
+    {plotWalls.map(({wall, x, y}) => <button className="plot-wall" type="button" key={wall}
+      style={{left: x, top: y}} aria-label={"Cross wall " + wall + " on the plot"}
+      disabled={neighbors[wall] === undefined} onClick={() => cross(wall)}>{wall}</button>)}
     <figcaption>
       <span><i className="fundamental" /> Fundamental chamber</span>
       <span><i className="selected" /> Selected chamber</span>
@@ -568,7 +575,7 @@ function App() {
       <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
         camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
         setPoint={point => update({point})} setCamera={camera => update({camera})}
-        choose={choose} cross={wall => choose(neighbors[wall])} />
+        choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} />
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
         update={update} choose={choose} changeCoupling={changeCoupling}
         changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null, point: null,

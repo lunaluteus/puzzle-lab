@@ -62,11 +62,14 @@ export function poincareCircle([ax, ay], [bx, by]) {
 }
 
 export function drawPlot(plot, model, chambers, word, {
-  zoom = 1, point = null, camera = null, projection = "klein", coordinates = "dual"
+  zoom = 1, point = null, camera = null, projection = "klein", coordinates = "dual", onWalls
 } = {}) {
   const ctx = plot.getContext("2d");
   const {width, height} = plot.getBoundingClientRect();
-  if (width === 0 || height === 0) return () => null;
+  if (width === 0 || height === 0) {
+    onWalls?.([]);
+    return () => null;
+  }
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
   plot.width = Math.round(width * ratio);
   plot.height = Math.round(height * ratio);
@@ -129,6 +132,11 @@ export function drawPlot(plot, model, chambers, word, {
     line([0, view.y], [width, view.y], palette.line);
     line([origin, 0], [origin, height], palette.line);
 
+    const walls = [];
+    function positionWall(wall, x, y) {
+      if (x >= 14 && x <= width - 14 && y >= 14 && y <= height - 14) walls.push({wall, x, y});
+    }
+
     function paintStrip({left, right, above, sOnLeft, word: chamberWord}) {
       const a = place(left), b = place(right), edge = above ? 0 : height;
       const selected = chamberWord === word;
@@ -143,18 +151,20 @@ export function drawPlot(plot, model, chambers, word, {
       if ((selected || chamberWord === "") && ctx.measureText(chamberWord || "C").width + 16 < step) {
         text(chamberWord || "C", (a + b) / 2, (view.y + edge) / 2, selected ? palette.dark : palette.label);
       }
-      if (selected && step >= 14) {
-        text("u", (a + b) / 2, view.y + (above ? -26 : 26), palette.dark);
-      }
-      if (selected && step >= 30) {
-        const y = .66 * view.y + .34 * edge;
-        if (a >= 0) text(sOnLeft ? "s" : "t", a + 9, y, palette.dark);
-        if (b <= width) text(sOnLeft ? "t" : "s", b - 9, y, palette.dark);
+      if (selected) {
+        const direction = above ? -1 : 1;
+        if (step >= 30) {
+          const y = view.y + direction * Math.max(56, .34 * view.y);
+          positionWall("s", sOnLeft ? a : b, y);
+          positionWall("t", sOnLeft ? b : a, y);
+        }
+        if (step >= 14) positionWall("u", (a + b) / 2, view.y + direction * 26);
       }
     }
 
     strips.filter(strip => strip.word !== word).forEach(paintStrip);
     if (selectedStrip) paintStrip(selectedStrip);
+    onWalls?.(walls);
     function axisLabel(label, x, y) {
       const labelWidth = ctx.measureText(label).width + 6;
       ctx.fillStyle = palette.dark;
