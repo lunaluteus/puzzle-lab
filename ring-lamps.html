@@ -79,7 +79,7 @@
   .rules, .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
   .rules label { display: grid; gap: 4px; font-size: 14px; }
   .rules .rule-choice { grid-column: 1 / -1; }
-  .rules [hidden] { display: none; }
+  .rules [hidden], .actions[hidden] { display: none; }
   select, .actions button {
     border: 1px solid #555d4d;
     border-radius: 8px;
@@ -91,7 +91,7 @@
   .actions button:hover:enabled, select:hover { border-color: var(--accent); }
   .actions button:disabled { opacity: .45; cursor: default; }
   .actions .primary { background: #d8b561; color: #241c0b; border-color: #d8b561; font-weight: 650; }
-  .actions #challenge { grid-column: 1 / -1; }
+  .actions #clear-lights { grid-column: 1 / -1; }
   .status { min-height: 3.1em; color: var(--accent); }
   .notes { margin-top: 16px; }
   .notes a { color: var(--accent); text-underline-offset: .2em; }
@@ -122,12 +122,18 @@
         <label>每次翻几盏<select id="span"></select></label>
       </div>
       <p>已翻转 <strong id="moves">0</strong> 次</p>
-      <div class="actions">
+      <div class="actions" id="play-actions">
         <button type="button" class="primary" id="new">换一题</button>
         <button type="button" id="hint">提示</button>
         <button type="button" id="undo" disabled>撤销</button>
         <button type="button" id="reset" disabled>重来</button>
         <button type="button" id="challenge">随机 21 灯挑战</button>
+        <button type="button" id="edit">编辑开局</button>
+      </div>
+      <div class="actions" id="edit-actions" hidden>
+        <button type="button" class="primary" id="apply-edit">开始解题</button>
+        <button type="button" id="cancel-edit">取消编辑</button>
+        <button type="button" id="clear-lights">全部熄灭</button>
       </div>
       <p class="status" id="status" aria-live="polite"></p>
     </div>
@@ -240,6 +246,9 @@ const reset = document.getElementById("reset");
 const hint = document.getElementById("hint");
 const litCount = document.getElementById("lit-count");
 const moves = document.getElementById("moves");
+const playActions = document.getElementById("play-actions");
+const editActions = document.getElementById("edit-actions");
+const edit = document.getElementById("edit");
 const initialPuzzle = [1, 3, 4, 5, 6, 8].reduce((mask, lamp) => mask | (1 << (lamp - 1)), 0);
 const challengePuzzle = [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 14]
   .reduce((mask, lamp) => mask | (1 << (lamp - 1)), 0);
@@ -249,6 +258,7 @@ let size = 12;
 let span = 3;
 let initial = initialPuzzle;
 let lights = initial;
+let draft = null;
 let history = [];
 let lamps = [];
 let windows = [];
@@ -265,21 +275,30 @@ function fillSpanChoices(preferred) {
 }
 
 function render(message = "", suggested = -1) {
+  const editing = draft !== null;
+  const displayed = draft ?? lights;
   lamps.forEach((lamp, i) => {
-    const on = Boolean(lights & (1 << i));
+    const on = Boolean(displayed & (1 << i));
     lamp.setAttribute("aria-label", `${i + 1} 号灯`);
     lamp.setAttribute("aria-pressed", String(on));
     lamp.classList.toggle("hint", i === suggested);
   });
-  litCount.textContent = String(countBits(lights));
+  litCount.textContent = String(countBits(displayed));
   moves.textContent = String(history.length);
+  moves.parentElement.hidden = editing;
+  playActions.hidden = editing;
+  editActions.hidden = !editing;
+  ruleControl.disabled = sizeControl.disabled = spanControl.disabled = editing;
   undo.disabled = reset.disabled = history.length === 0;
   hint.disabled = lights === 0;
-  status.textContent = lights === 0 ? `全关了！用了 ${history.length} 次。` : message;
+  const announcement = editing ? "逐盏设置亮灭，然后点「开始解题」。"
+    : lights === 0 ? `全关了！用了 ${history.length} 次。` : message;
+  if (status.textContent !== announcement) status.textContent = announcement;
 }
 
 function start(mask, message = "") {
   initial = lights = mask;
+  draft = null;
   history = [];
   const url = new URL(location.href);
   const rule = ruleControl.value;
@@ -300,6 +319,11 @@ function start(mask, message = "") {
 }
 
 function toggleLamp(i) {
+  if (draft !== null) {
+    draft ^= 1 << i;
+    render();
+    return;
+  }
   history.push(lights);
   lights ^= windows[i];
   render();
@@ -377,6 +401,24 @@ spanControl.addEventListener("change", () => {
 });
 document.getElementById("new").addEventListener("click", newPuzzle);
 document.getElementById("challenge").addEventListener("click", () => startChallenge(true));
+edit.addEventListener("click", () => {
+  draft = initial;
+  render();
+  lamps[0].focus();
+});
+document.getElementById("clear-lights").addEventListener("click", () => {
+  draft = 0;
+  render();
+});
+document.getElementById("cancel-edit").addEventListener("click", () => {
+  draft = null;
+  render("已取消编辑。");
+  edit.focus();
+});
+document.getElementById("apply-edit").addEventListener("click", () => {
+  start(draft);
+  edit.focus();
+});
 reset.addEventListener("click", () => start(initial));
 undo.addEventListener("click", () => {
   if (history.length === 0) return;
