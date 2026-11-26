@@ -71,73 +71,23 @@
     main { width: calc(100% - 22px); padding-top: 18px; }
     aside { grid-template-columns: 1fr; }
   }
+
+  .inspector { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 12px; margin-top: 18px; }
+  .data h2 { margin: 0 0 8px; font-size: 1rem; }
+  .matrix { border-collapse: collapse; color: var(--ink); font: .86rem ui-monospace, monospace; }
+  .matrix td, .matrix th { text-align: center; min-width: 28px; padding: 6px 5px; }
+  .matrix td { background: #eef0e7; border: 1px solid var(--surface); }
+  .matrix th { color: var(--muted); }
+  .graph { position: relative; width: 180px; height: 103px; }
+  .graph-line { position: absolute; border-top: 1.5px solid var(--accent); transform-origin: left center; }
+  .graph-line.dotted { border-top-style: dashed; }
+  .graph-node, .graph-weight { position: absolute; transform: translate(-50%, -50%); }
+  .graph-node { display: grid; place-content: center; width: 23px; height: 23px; background: #dcece3; border: 1px solid #6c9d8a; border-radius: 50%; font: .91rem Georgia, serif; }
+  .graph-weight { background: var(--surface); padding: 0 4px; color: var(--muted); font: .78rem ui-monospace, monospace; }
 </style>
-<script defer src="tits-cone.js"></script>
+  <script type="module" src="./src/coxeter/app.jsx"></script>
 </head>
 <body>
-<main>
-  <header>
-    <a href="index.html">Puzzle Lab</a>
-    <h1>The Tits Cone</h1>
-    <p>Reflect a fundamental chamber and see how its orbit fills the dual space.</p>
-  </header>
-
-  <div class="viewer">
-    <figure>
-      <canvas id="plot" tabindex="0" aria-label="Coxeter chambers. Select a visible chamber or press S, T or U to cross a wall."></canvas>
-      <figcaption>
-        <span><i class="fundamental"></i> Fundamental chamber</span>
-        <span><i class="selected"></i> Selected chamber</span>
-        <span id="limit-key"><i class="limit"></i> Limit boundary</span>
-      </figcaption>
-    </figure>
-
-    <aside aria-label="Chamber controls">
-      <div class="panel">
-        <label for="model">Coxeter example</label>
-        <select id="model">
-          <option value="a2">A₂ · finite</option>
-          <option value="i25">I₂(5) · finite</option>
-          <option value="affine">Ã₁ · affine</option>
-          <option value="indefinite" selected>I₂(∞) · indefinite</option>
-          <option value="affine2">Ã₂ · Euclidean triangles</option>
-          <option value="ideal">(∞, ∞, ∞) · ideal triangle</option>
-        </select>
-        <label class="depth-label" for="depth">Gallery depth <output id="depth-value" for="depth"></output></label>
-        <input id="depth" type="range" min="0" step="1">
-        <p id="count"></p>
-        <p id="shape"></p>
-      </div>
-      <div class="panel">
-        <div class="field-heading">Selected chamber</div>
-        <div class="word" id="word" aria-live="polite"></div>
-        <div class="walls" aria-label="Cross a wall">
-          <button data-wall="s" type="button">Cross s</button>
-          <button data-wall="t" type="button">Cross t</button>
-          <button data-wall="u" type="button">Cross u</button>
-        </div>
-        <div class="tools"><button id="home" type="button">Home chamber</button></div>
-        <p id="hint">Click a visible chamber or cross a wall to move through the gallery.</p>
-      </div>
-    </aside>
-  </div>
-
-  <details>
-    <summary>Coordinates and conventions</summary>
-    <p>Write x<sub>i</sub> = λ(α<sub>i</sub>) for λ in the dual of the simple-root space.
-      The closed fundamental chamber C has x<sub>i</sub> ≥ 0, and the Tits cone is the union of the chambers wC.
-      Crossing wall i of wC takes you to ws<sub>i</sub>C.</p>
-    <p id="matrix"></p>
-    <p>In rank two the axes show the actual dual coordinates. In rank three, each positive ray meets
-      the slice x<sub>s</sub> + x<sub>t</sub> + x<sub>u</sub> = 1. This gives a Euclidean tiling
-      for Ã₂ and a Klein disk for the ideal triangle. The chamber depth limits the drawn gallery.
-      The shaded background shows the interior of the cone or slice.</p>
-    <p>References
-      <a href="https://people.math.osu.edu/davis.12/papers/SurveyKM.pdf">Rémy, Kac–Moody groups, §1.1</a>
-      · <a href="https://personal.math.ubc.ca/~cass/coxeter/R.html">Casselman, Coxeter Groups I</a>
-      · <a href="https://arxiv.org/abs/1305.0052">Hohlweg, Préaux and Ripoll, Lorentzian Coxeter groups</a>
-    </p>
-  </details>
-</main>
+  <div id="app"></div>
 </body>
 </html>
