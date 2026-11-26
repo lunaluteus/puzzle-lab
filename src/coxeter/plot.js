@@ -114,7 +114,14 @@ export function drawPlot(plot, model, chambers, word, {
     const min = Math.min(...strips.map(strip => strip.left));
     const max = Math.max(...strips.map(strip => strip.right));
     const step = Math.min(.86 * width / (max - min), .42 * height) * zoom;
-    const place = x => view.x + (x - (min + max) / 2) * step;
+    const selectedStrip = strips.find(strip => strip.word === word);
+    const galleryCenter = (min + max) / 2;
+    const selectedCenter = selectedStrip ? (selectedStrip.left + selectedStrip.right) / 2 : galleryCenter;
+    // Keep the gallery centered until the selected strip needs more room at an edge.
+    const margin = Math.min(24, .06 * width);
+    const visibleOffset = Math.max(0, view.x - margin - step / 2) / step;
+    const center = Math.min(selectedCenter + visibleOffset, Math.max(galleryCenter, selectedCenter - visibleOffset));
+    const place = x => view.x + (x - center) * step;
     ctx.font = labelFont;
     ctx.fillStyle = palette.interior;
     ctx.fillRect(0, 0, width, height);
@@ -136,8 +143,7 @@ export function drawPlot(plot, model, chambers, word, {
     }
 
     strips.filter(strip => strip.word !== word).forEach(paintStrip);
-    const selected = strips.find(strip => strip.word === word);
-    if (selected) paintStrip(selected);
+    if (selectedStrip) paintStrip(selectedStrip);
     text("xₛ", width - 10, view.y - 13, palette.label, "right");
     text("xᵤ", 10, 15, palette.label, "left");
     return (x, y) => ({
