@@ -100,6 +100,7 @@
           <option value="i25">I₂(5) · finite</option>
           <option value="affine">Ã₁ · affine</option>
           <option value="indefinite" selected>I₂(∞) · indefinite</option>
+          <option value="affine2">Ã₂ · Euclidean triangles</option>
           <option value="ideal">(∞, ∞, ∞) · ideal triangle</option>
         </select>
         <label class="depth-label" for="depth">Gallery depth <output id="depth-value" for="depth"></output></label>
@@ -127,11 +128,13 @@
       The closed fundamental chamber C has x<sub>i</sub> ≥ 0, and the Tits cone is the union of the chambers wC.
       Crossing wall i of wC takes you to ws<sub>i</sub>C.</p>
     <p id="matrix"></p>
-    <p>In rank two the axes show the actual dual coordinates. In rank three, each positive ray is
-      cut at x<sub>s</sub> + x<sub>t</sub> + x<sub>u</sub> = 1 and drawn in the Klein disk.
-      The chamber depth limits the drawn gallery. The background shows the entire interior of the cone or slice.</p>
+    <p>In rank two the axes show the actual dual coordinates. In rank three, each positive ray meets
+      the slice x<sub>s</sub> + x<sub>t</sub> + x<sub>u</sub> = 1. This gives a Euclidean tiling
+      for Ã₂ and a Klein disk for the ideal triangle. The chamber depth limits the drawn gallery.
+      The shaded background shows the interior of the cone or slice.</p>
     <p>References
       <a href="https://people.math.osu.edu/davis.12/papers/SurveyKM.pdf">Rémy, Kac–Moody groups, §1.1</a>
+      · <a href="https://personal.math.ubc.ca/~cass/coxeter/R.html">Casselman, Coxeter Groups I</a>
       · <a href="https://arxiv.org/abs/1305.0052">Hohlweg, Préaux and Ripoll, Lorentzian Coxeter groups</a>
     </p>
   </details>

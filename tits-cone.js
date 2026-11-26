@@ -9,6 +9,8 @@ const models = {
     shape: "The open half-plane xₛ + xₜ > 0, together with the origin."},
   indefinite: {rank: 2, c: 1.35, depth: 4, max: 16,
     shape: "An open wedge and the origin. The chambers accumulate at two excluded rays."},
+  affine2: {rank: 3, euclidean: true, c: 0.5, depth: 4, max: 9,
+    shape: "The entire Euclidean slice is tiled by equilateral triangles."},
   ideal: {rank: 3, c: 1, depth: 4, max: 7,
     shape: "The open Klein disk and the ideal vertices of the reflected triangles."}
 };
@@ -33,6 +35,7 @@ const palette = {
 };
 
 let model, depth, word, chambers, view;
+let euclideanGallery;
 
 function reflect(point, index, c) {
   return point.map((value, i) => i === index ? -value : value + 2 * c * point[index]);
@@ -51,6 +54,9 @@ function alternating(first, length) {
 }
 
 function crossWall(expression, wall, example) {
+  if (example.euclidean) {
+    return affineGallery(example).byWord.get(expression).neighbors.get(wall) ?? null;
+  }
   if (expression.endsWith(wall)) return expression.slice(0, -1);
   if (example.order && expression.length === example.order) {
     return alternating("t", example.order).slice(0, -1);
@@ -61,7 +67,36 @@ function crossWall(expression, wall, example) {
   return expression + wall;
 }
 
+function affineGallery(example) {
+  if (euclideanGallery) return euclideanGallery;
+  const origin = {word: "", rays: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], neighbors: new Map()};
+  const list = [origin];
+  const byWord = new Map([["", origin]]);
+  const key = rays => rays.flat().join(",");
+  const byRays = new Map([[key(origin.rays), origin]]);
+  for (let cursor = 0; cursor < list.length; cursor++) {
+    const chamber = list[cursor];
+    for (const [i, wall] of symbols.entries()) {
+      const a = chamber.rays[(i + 1) % 3], b = chamber.rays[(i + 2) % 3];
+      // In the affine slice the reflected vertex is a + b − v. Its coordinates stay integral.
+      const rays = chamber.rays.map((v, j) => j === i ? v.map((x, k) => a[k] + b[k] - x) : v);
+      const signature = key(rays);
+      let target = byRays.get(signature);
+      if (!target && chamber.word.length < example.max) {
+        target = {word: chamber.word + wall, rays, neighbors: new Map()};
+        byRays.set(signature, target);
+        byWord.set(target.word, target);
+        list.push(target);
+      }
+      if (target) chamber.neighbors.set(wall, target.word);
+    }
+  }
+  euclideanGallery = {list, byWord};
+  return euclideanGallery;
+}
+
 function gallery(example, limit) {
+  if (example.euclidean) return affineGallery(example).list.filter(chamber => chamber.word.length <= limit);
   const result = [];
   const queue = [""];
   const seen = new Set(queue);
@@ -229,13 +264,17 @@ function paintTriangle(chamber) {
   }
 }
 
+function paintTriangles() {
+  chambers.filter(chamber => chamber.word !== word).forEach(paintTriangle);
+  paintTriangle(chambers.find(chamber => chamber.word === word));
+}
+
 function paintDisk() {
   ctx.beginPath();
   ctx.arc(view.x, view.y, view.radius, 0, tau);
   ctx.fillStyle = palette.interior;
   ctx.fill();
-  chambers.filter(chamber => chamber.word !== word).forEach(paintTriangle);
-  paintTriangle(chambers.find(chamber => chamber.word === word));
+  paintTriangles();
   ctx.beginPath();
   ctx.arc(view.x, view.y, view.radius, 0, tau);
   ctx.setLineDash([4, 5]);
@@ -265,8 +304,17 @@ function draw() {
     radius: .45 * Math.min(width, height), far: Math.hypot(width, height)};
   ctx.fillStyle = palette.outside;
   ctx.fillRect(0, 0, width, height);
-  if (model.rank === 2) paintFans();
-  else paintDisk();
+  if (model.rank === 2) {
+    paintFans();
+  } else if (model.euclidean) {
+    const extent = Math.max(...chambers.flatMap(chamber => triangle(chamber).map(vertex => Math.hypot(...vertex))));
+    view.radius /= extent;
+    ctx.fillStyle = palette.interior;
+    ctx.fillRect(0, 0, width, height);
+    paintTriangles();
+  } else {
+    paintDisk();
+  }
 }
 
 function containsTriangle(point, vertices) {
@@ -278,7 +326,7 @@ function containsTriangle(point, vertices) {
 }
 
 function choose(next) {
-  if (next.length > model.max) return;
+  if (next === null || next.length > model.max) return;
   word = next;
   depth = Math.max(depth, word.length);
   render();
@@ -292,7 +340,9 @@ function render() {
   $("word").textContent = word ? word.split("").join(" ") + " C" : "C";
   $("home").disabled = word === "";
   for (const button of wallButtons) {
-    if (!button.hidden) button.disabled = crossWall(word, button.dataset.wall, model).length > model.max;
+    if (button.hidden) continue;
+    const next = crossWall(word, button.dataset.wall, model);
+    button.disabled = next === null || next.length > model.max;
   }
   $("hint").textContent = !model.order && word.length === model.max
     ? "Gallery limit reached. Cross back or select another chamber."
@@ -309,7 +359,7 @@ function loadModel() {
   $("matrix").textContent = "The Gram matrix has diagonal 1 and off-diagonal −c, with c = "
     + Number(model.c.toFixed(5))
     + ". The dual reflection negates xᵢ and adds 2c xᵢ to every other coordinate.";
-  $("limit-key").hidden = Boolean(model.order);
+  $("limit-key").hidden = Boolean(model.order || model.euclidean);
   wallButtons.forEach((button, i) => { button.hidden = i >= model.rank; });
   render();
 }
