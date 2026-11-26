@@ -1,6 +1,7 @@
 import { sphere, symbols } from "./model.js";
 
 const tau = 2 * Math.PI;
+const cameraPrecision = 1e6;
 const dot = (a, b) => a.reduce((total, x, i) => total + x * b[i], 0);
 const cross = ([a, b, c], [d, e, f]) => [b * f - c * e, c * d - a * f, a * e - b * d];
 const unit = point => {
@@ -33,6 +34,23 @@ export function rotateSphereCamera(basis, dx, dy) {
     const parallel = dot(axis, vector) * (1 - cosine);
     return vector.map((value, row) => cosine * value + sine * perpendicular[row] + parallel * axis[row]);
   }).map((_, row, columns) => columns.map(column => column[row]));
+}
+
+export function encodeSphereCamera(camera) {
+  return camera.slice(0, 2).flat().map(value => Math.round(value * cameraPrecision)).join(",");
+}
+
+export function decodeSphereCamera(encoded) {
+  const fields = encoded?.split(",");
+  if (fields?.length !== 6 || fields.some(field => !/^-?\d{1,7}$/.test(field))) return null;
+  const values = fields.map(field => Number(field) / cameraPrecision);
+  const horizontal = values.slice(0, 3), vertical = values.slice(3);
+  const tolerance = 4 / cameraPrecision;
+  if ([horizontal, vertical].some(axis => Math.abs(Math.hypot(...axis) - 1) > tolerance)
+    || Math.abs(dot(horizontal, vertical)) > tolerance) return null;
+  const right = unit(horizontal);
+  const forward = unit(cross(vertical, right));
+  return [right, cross(right, forward), forward];
 }
 
 export function clipHemisphere(vertices) {

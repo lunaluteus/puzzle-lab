@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { buildGallery, exampleById, examples, limitRays, probeRankTwo, sphere, wallNames } from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
-import { rotateSphereCamera, sphereCamera } from "./spherical.js";
+import { decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "./spherical.js";
 import maths from "virtual:coxeter-math";
 
 const defaultId = "indefinite";
@@ -22,7 +22,8 @@ function initialView() {
   const budgetDepth = Number.isInteger(budget) ? Math.min(budget, model.max) : model.depth;
   const depth = Math.max(word.length, budgetDepth);
   const zoom = Number(query.get("zoom"));
-  return { id: model.id, word, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1 };
+  const camera = model.family === "Spherical" ? decodeSphereCamera(query.get("camera")) : null;
+  return { id: model.id, word, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera };
 }
 
 function PointProbe({model, point}) {
@@ -45,22 +46,22 @@ function PointProbe({model, point}) {
   </p>;
 }
 
-function Plot({model, chambers, word, zoom, choose, cross}) {
+function Plot({model, chambers, word, zoom, camera, setCamera, choose, cross}) {
   const canvas = useRef(null);
   const pick = useRef(null);
   const drag = useRef(null);
   const [point, setPoint] = useState(null);
-  const [camera, setCamera] = useState(null);
-  const [dragging, setDragging] = useState(false);
+  const [previewCamera, setPreviewCamera] = useState(null);
   const spherical = model.family === "Spherical";
+  const plotCamera = previewCamera ?? camera;
 
   useLayoutEffect(() => {
-    const redraw = () => { pick.current = drawPlot(canvas.current, model, chambers, word, zoom, point, camera); };
+    const redraw = () => { pick.current = drawPlot(canvas.current, model, chambers, word, zoom, point, plotCamera); };
     redraw();
     const observer = new ResizeObserver(redraw);
     observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [model, chambers, word, zoom, point, camera]);
+  }, [model, chambers, word, zoom, point, plotCamera]);
 
   const centeredCamera = () => sphereCamera(chambers.find(chamber => chamber.word === word).rays.map(sphere(model)));
 
@@ -78,12 +79,12 @@ function Plot({model, chambers, word, zoom, choose, cross}) {
   function endDrag(event) {
     if (drag.current?.id !== event.pointerId) return;
     drag.current = null;
-    setDragging(false);
+    setPreviewCamera(null);
   }
 
   return <figure>
     <canvas id="plot" ref={canvas} tabIndex="0"
-      className={spherical ? "sphere" : undefined} data-dragging={dragging}
+      className={spherical ? "sphere" : undefined} data-dragging={previewCamera !== null}
       aria-label={spherical
         ? "Coxeter chambers. Drag or use the arrow keys to rotate. Tap or click to select."
         : "Coxeter chambers. Click a chamber or press a generator key to cross a wall."}
@@ -99,16 +100,17 @@ function Plot({model, chambers, word, zoom, choose, cross}) {
         const active = drag.current;
         if (!active || active.id !== event.pointerId) return;
         const dx = event.clientX - active.x, dy = event.clientY - active.y;
-        if (!active.moved) {
-          if (Math.hypot(dx, dy) < 4) return;
-          active.moved = true;
-          setDragging(true);
-        }
-        setCamera(rotateSphereCamera(active.basis, dx * active.scale, dy * active.scale));
+        if (!active.moved && Math.hypot(dx, dy) < 4) return;
+        active.moved = true;
+        setPreviewCamera(rotateSphereCamera(active.basis, dx * active.scale, dy * active.scale));
       }}
       onPointerUp={event => {
-        if (drag.current?.id !== event.pointerId) return;
-        if (!drag.current.moved) selectAt(event);
+        const active = drag.current;
+        if (!active || active.id !== event.pointerId) return;
+        const dx = event.clientX - active.x, dy = event.clientY - active.y;
+        if (active.moved || Math.hypot(dx, dy) >= 4) {
+          setCamera(rotateSphereCamera(active.basis, dx * active.scale, dy * active.scale));
+        } else selectAt(event);
         endDrag(event);
       }}
       onPointerCancel={endDrag}
@@ -117,7 +119,7 @@ function Plot({model, chambers, word, zoom, choose, cross}) {
         const rotation = spherical && rotationKeys.get(event.key);
         if (rotation) {
           event.preventDefault();
-          setCamera(current => rotateSphereCamera(current ?? centeredCamera(), ...rotation));
+          setCamera(rotateSphereCamera(camera ?? centeredCamera(), ...rotation));
           return;
         }
         const s = event.key.toLowerCase();
@@ -290,7 +292,9 @@ function App() {
     else url.searchParams.delete("word");
     if (view.zoom === 1) url.searchParams.delete("zoom");
     else url.searchParams.set("zoom", view.zoom);
-    history.replaceState(null, "", url);
+    if (view.camera) url.searchParams.set("camera", encodeSphereCamera(view.camera));
+    else url.searchParams.delete("camera");
+    if (url.href !== location.href) history.replaceState(null, "", url);
   }, [view, model]);
 
   return <main>
@@ -301,9 +305,11 @@ function App() {
     </header>
     <div className="viewer">
       <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
+        camera={view.camera} setCamera={camera => update({camera})}
         choose={choose} cross={wall => choose(neighbors[wall])} />
       <Controls model={model} view={view} count={chambers.length} neighbors={neighbors}
-        update={update} choose={choose} changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth})} />
+        update={update} choose={choose}
+        changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null})} />
     </div>
     <Inspector model={model} />
     <Notes />

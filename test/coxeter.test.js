@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildGallery, exampleById, examples, limitRays, probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
-import { clipHemisphere, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
+import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { exampleFormulae, gramEntry } from "../src/coxeter/formulas.js";
 
 function close(a, b) {
@@ -157,6 +157,21 @@ test("sphere rotation sends the center in the drag direction and keeps the camer
   }
   const restored = rotateSphereCamera(turned, -.3, .8);
   assert.ok(restored.every((row, i) => row.every((value, j) => close(value, basis[i][j]))));
+});
+
+test("a shared sphere camera retains its direction and rejects invalid coordinates", () => {
+  for (const model of examples.filter(example => example.family === "Spherical")) {
+    const [chamber] = buildGallery(model).list;
+    let camera = sphereCamera(chamber.rays.map(sphere(model)));
+    for (let step = 0; step < 12; step++) {
+      camera = rotateSphereCamera(camera, .31 * Math.cos(step), -.47);
+      const restored = decodeSphereCamera(encodeSphereCamera(camera));
+      assert.ok(restored.every((axis, i) => axis.every((value, j) => Math.abs(value - camera[i][j]) < 2e-6)));
+    }
+  }
+  for (const invalid of [null, "", "1,0,0", "1e6,0,0,0,-1000000,0", "1000000,0,0,-1000000,0,0"]) {
+    assert.equal(decodeSphereCamera(invalid), null);
+  }
 });
 
 test("rank-two probes get the distance from chamber interiors and distinguish limiting rays", () => {
