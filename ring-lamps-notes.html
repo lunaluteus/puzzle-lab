@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>环灯题解 · Luna 的谜题桌</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #f3eddd;
+    --muted: #c9c7b6;
+    --accent: #f1c66e;
+    --line: #53614f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100svh;
+    background: radial-gradient(ellipse at top, #282d23, #161c18 70%);
+    color: var(--ink);
+    font: 1rem/1.75 system-ui, sans-serif;
+  }
+  main { width: min(100% - 36px, 700px); margin: auto; padding: clamp(24px, 7vw, 70px) 0; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: .95rem; }
+  a { color: var(--accent); text-underline-offset: .2em; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid #daf2a6; outline-offset: 4px; }
+  h1 { margin: 18px 0 12px; font-size: clamp(2rem, 7vw, 3.4rem); line-height: 1.18; }
+  h2 { margin: 1.6em 0 .35em; font-size: 1.28rem; }
+  p { margin: .65em 0; }
+  .intro { color: var(--muted); font-size: 1.1rem; }
+  var { font-family: Georgia, serif; }
+  strong { color: var(--accent); }
+  ul { padding-inline-start: 1.5em; }
+  details { margin-top: 20px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  summary { color: var(--accent); cursor: pointer; }
+  table { margin: 1rem 0; width: 100%; border-collapse: collapse; }
+  th, td { padding: .48rem .42rem; border-bottom: 1px solid var(--line); text-align: start; }
+  th { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <nav aria-label="谜题导航">
+    <a href="ring-lamps.html?challenge=21">玩 21 灯挑战</a>
+    <a href="./">回谜题桌</a>
+  </nav>
+  <article>
+    <h1>为什么最难要按 10 次？</h1>
+    <p class="intro">在 21 盏灯的圆环上，按第 <var>i</var> 盏会翻转 <var>i</var>、<var>i</var>+1、<var>i</var>+3 三盏。所有有解的开局都能在 10 次内关完，其中有 <strong>2,187 局</strong>正好需要 10 次。</p>
+
+    <h2>先把按键写成多项式</h2>
+    <p>按同一盏灯两次会抵消，顺序也不影响结果，所以每盏灯只需记「按」或「不按」。从 0 编号，把按键集合写成 <var>P</var>，每按第 <var>i</var> 盏就给 <var>P</var> 加一项 <var>x</var><sup><var>i</var></sup>。亮灯集合也用同样的办法记。</p>
+    <p>在二元域 𝔽₂ 上，翻灯的效果就是用 <var>f</var> = 1 + <var>x</var> + <var>x</var><sup>3</sup> 乘 <var>P</var>。灯环有 <var>n</var> 盏，所以乘完把 <var>x</var><sup><var>n</var></sup> 当作 1。<var>f</var> 是不可约三次多项式，根在八元域里，乘法阶为 7。因此，只有 <var>n</var> 是 7 的倍数时，才可能有两种不同按法做出同一个开局。</p>
+
+    <h2>同一个开局有八种按法</h2>
+    <p>把编号相差 7 的灯放在同一组，例如 1、8、15 号灯。因为 <var>f</var>(1 + <var>x</var> + <var>x</var><sup>2</sup> + <var>x</var><sup>4</sup>) = 1 + <var>x</var><sup>7</sup>，把余数为 0、1、2、4 的四组全部按一遍，最后什么也没变。把这套按键顺时针移位，共得七套不同的「白按」按法。加上什么也不按，正好八套。</p>
+    <p>如果 <var>fP</var> 是 <var>x</var><sup><var>n</var></sup> + 1 的倍数，<var>P</var> 就是 (<var>x</var><sup><var>n</var></sup> + 1)/<var>f</var> 的倍数。由于 <var>P</var> 的次数小于 <var>n</var>，乘上去的多项式至多二次，只有 2<sup>3</sup> 种选法。这八套已经找全。</p>
+    <p>把任意一组解分别与那八套按法做异或，就得到同一开局的全部解。在这八种解里，每盏灯恰好有四次按、四次不按。平均需要 21/2 次，所以最短的一种至多要按 <strong>10 次</strong>。</p>
+
+    <h2>每组各按两盏，就能造一道最难题</h2>
+    <p>从全灭开始，在七组里各选两盏来按。一共按了 14 盏。换成另一种解时，会有四组的按键全部取反，这四组各从按两盏变成按一盏，于是总数降到 10。八种解的长度只有 14 和 10，最短就是 10。</p>
+    <p>每组选哪一盏不按有三种选法，所以能造出 3<sup>7</sup> = 2,187 局。没有重复，因为两份这样的按键集合在每组至多相差两盏，而任何非空的「白按」按法都会把某一组三盏全部取反。</p>
+
+    <details>
+      <summary>任意长度的公式，以及为什么没有漏掉开局</summary>
+      <p>设灯数为 <var>n</var> ≥ 4。如果 <var>n</var> 不是 7 的倍数，翻灯映射可逆，每局只有一种按法。最难的只有全亮这一局，要按所有 <var>n</var> 盏。</p>
+      <p>如果 <var>n</var> = 7<var>m</var>，令 <var>B</var> 为一组 <var>m</var> 盏灯中选 ⌊<var>m</var>/2⌋ 盏的方法数。</p>
+      <p>八种解的平均长度仍是 <var>n</var>/2。要达到这个上界，让每组都按 ⌈<var>m</var>/2⌉ 盏。<var>m</var> 为偶数时，取反也不改变步数。<var>m</var> 为奇数时，取反的四组各少按一盏，最短解就是 ⌊<var>n</var>/2⌋ 步。</p>
+      <table>
+        <thead>
+          <tr><th scope="col">组内灯数</th><th scope="col">最坏步数</th><th scope="col">最难开局数</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row"><var>m</var> 为奇数</th><td>⌊<var>n</var>/2⌋</td><td><var>B</var><sup>7</sup></td></tr>
+          <tr><th scope="row"><var>m</var> 为偶数</th><td><var>n</var>/2</td><td><var>B</var><sup>7</sup>/8</td></tr>
+        </tbody>
+      </table>
+      <p>为证明数目，取同一开局的一种按法，设第 <var>j</var> 组按了 <var>w</var><sub><var>j</var></sub> 盏，记 <var>a</var><sub><var>j</var></sub> = <var>m</var> − 2<var>w</var><sub><var>j</var></sub>。对八套「白按」按法中的每一套 <var>c</var>，第 <var>j</var> 组不取反记号 +1，取反记号 −1，把这个记号写成 χ<sub><var>j</var></sub>(<var>c</var>)。另一种解的长度是 (<var>n</var> − <var>S</var><sub><var>c</var></sub>)/2，其中 <var>S</var><sub><var>c</var></sub> = Σ<var>a</var><sub><var>j</var></sub>χ<sub><var>j</var></sub>(<var>c</var>)。</p>
+      <p>七个组的取反条件是七个不同的非零线性形式，所以七列符号两两正交，每列和为零。因而八个 <var>S</var><sub><var>c</var></sub> 的平均值是 0，并且可以用对应的符号列从这八个值还原每个 <var>a</var><sub><var>j</var></sub>。</p>
+      <p><var>m</var> 为偶数时，要让最短解正好是 <var>n</var>/2，八个 <var>S</var><sub><var>c</var></sub> 必须全是 0。这等价于每组刚好按一半。于是有 <var>B</var><sup>7</sup> 种按键集合，每个开局被算了八次。</p>
+      <p><var>m</var> 为奇数时，最难开局要求最大的 <var>S</var><sub><var>c</var></sub> 是 1。八个数 1 − <var>S</var><sub><var>c</var></sub> 都非负，和是 8。由正交性，−<var>a</var><sub><var>j</var></sub> 是这一列 ±1 符号以 (1 − <var>S</var><sub><var>c</var></sub>)/8 为权重的平均值。它是奇数，只能是 ±1。这要求所有权重非零的行在每一列上的符号都相同，而八行符号各不相同，所以权重全落在某一行。按那一行取反后，每组正好按 ⌈<var>m</var>/2⌉ 盏。这种代表按法每局恰有一套，给出 <var>B</var><sup>7</sup> 局。21 盏时这就是每组各按两盏的构造。</p>
+    </details>
+  </article>
+</main>
+</body>
+</html>

@@ -93,6 +93,9 @@
   .actions .primary { background: #d8b561; color: #241c0b; border-color: #d8b561; font-weight: 650; }
   .actions #challenge { grid-column: 1 / -1; }
   .status { min-height: 3.1em; color: var(--accent); }
+  .notes { margin-top: 16px; }
+  .notes a { color: var(--accent); text-underline-offset: .2em; }
+  .notes a:focus-visible { outline: 3px solid #daf2a6; outline-offset: 4px; }
 </style>
 </head>
 <body>
@@ -129,6 +132,7 @@
       <p class="status" id="status" aria-live="polite"></p>
     </div>
   </div>
+  <p class="notes"><a href="ring-lamps-notes.html">21 灯挑战的题解</a></p>
 </main>
 <script>
 "use strict";
