@@ -1,9 +1,9 @@
 import React, { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  affineDihedralProduct, braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels, dihedralProductModels, exampleById,
-  infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder, presets, probeRankTwo, sphere,
-  triangleSeries, wallNames
+  affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels,
+  dihedralProductModels, exampleById, infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder,
+  presets, probeRankTwo, sphere, triangleSeries, wallNames
 } from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
@@ -374,10 +374,10 @@ function Formula(props) {
   </Suspense>;
 }
 
-function Inspector({model, coordinates}) {
+function Inspector({model, coordinates, chamber}) {
   const {relations, matrix, eigenvalues, angles, angleSum, area, covector, angle} = exampleFormulae(model);
   const spherical = model.family === "Spherical";
-  const affineProduct = model === affineDihedralProduct;
+  const strip = model === affineDihedralProduct ? affineProductStrip(chamber) : null;
   const signature = {"Finite line": "Positive definite", "Finite dihedral": "Positive definite", Spherical: "Positive definite",
     Affine: "Positive semidefinite", Indefinite: "Signature (1, 1)", Hyperbolic: "Signature (2, 1)"};
   return <section className="inspector" aria-label="Coxeter data">
@@ -393,10 +393,11 @@ function Inspector({model, coordinates}) {
       {eigenvalues && <p>Eigenvalues <Formula latex={eigenvalues} label="Gram eigenvalues" />.</p>}
     </div>
     <div className="panel data">
-      <h2>{spherical ? "Sphere of rays" : angles || affineProduct ? "Projective slice" : model.rank === 1 ? "The dual line" : "The dual plane"}</h2>
+      <h2>{spherical ? "Sphere of rays" : angles || strip ? "Projective slice" : model.rank === 1 ? "The dual line" : "The dual plane"}</h2>
       {model.rank === 1 ? <p>The positive half-line is the fundamental chamber. Reflecting across zero gives the other half-line. Both include zero.</p>
-      : affineProduct ? <>
+      : strip ? <>
         <p>Slice <Formula latex={mathNotes.affineProductSlice} /> in coordinates <Formula latex={mathNotes.affineProductAxes} />.</p>
+        <p>In the selected chamber, {strip.left} ≤ xₛ ≤ {strip.right} and xᵤ {strip.above ? "≥" : "≤"} 0.</p>
         <p>The Tits cone consists of <Formula latex={mathNotes.affineProductPositiveHeight} /> and
           the line <Formula latex={mathNotes.affineProductLine} /> at height zero.</p>
       </>
@@ -513,7 +514,8 @@ function App() {
   const graph = buildGallery(model);
   const chambers = useMemo(() => graph.list.filter(chamber => chamber.word.length <= view.depth),
     [graph, view.depth]);
-  const neighbors = graph.byWord.get(view.word).neighbors;
+  const chamber = graph.byWord.get(view.word);
+  const {neighbors} = chamber;
   const update = patch => setView(current => ({...current, ...patch}));
   const choose = word => {
     if (word !== undefined) setView(current => ({
@@ -570,7 +572,7 @@ function App() {
         changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null, point: null,
           projection: view.projection, coordinates: view.coordinates})} />
     </div>
-    <Inspector model={model} coordinates={view.coordinates} />
+    <Inspector model={model} coordinates={view.coordinates} chamber={chamber} />
     <Notes notesRef={notes} />
   </main>;
 }

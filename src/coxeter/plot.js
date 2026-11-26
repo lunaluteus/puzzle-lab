@@ -125,6 +125,9 @@ export function drawPlot(plot, model, chambers, word, {
     ctx.font = labelFont;
     ctx.fillStyle = palette.interior;
     ctx.fillRect(0, 0, width, height);
+    const origin = place(0);
+    line([0, view.y], [width, view.y], palette.line);
+    line([origin, 0], [origin, height], palette.line);
 
     function paintStrip({left, right, above, word: chamberWord}) {
       const a = place(left), b = place(right), edge = above ? 0 : height;
@@ -144,8 +147,24 @@ export function drawPlot(plot, model, chambers, word, {
 
     strips.filter(strip => strip.word !== word).forEach(paintStrip);
     if (selectedStrip) paintStrip(selectedStrip);
-    text("xₛ", width - 10, view.y - 13, palette.label, "right");
-    text("xᵤ", 10, 15, palette.label, "left");
+    function axisLabel(label, x, y) {
+      const labelWidth = ctx.measureText(label).width + 6;
+      ctx.fillStyle = palette.dark;
+      ctx.fillRect(x - labelWidth / 2, y - 7, labelWidth, 15);
+      text(label, x, y, palette.label);
+    }
+
+    const tickStep = Math.max(1, Math.ceil(30 / step));
+    for (let coordinate = Math.ceil(min / tickStep) * tickStep; coordinate <= max; coordinate += tickStep) {
+      const x = place(coordinate);
+      if (x < 13 || x > width - 13) continue;
+      line([x, view.y - 3], [x, view.y + 4], palette.axis);
+      axisLabel(String(coordinate).replace("-", "−"), x, view.y + 13);
+    }
+    axisLabel("xₛ", width - 16, view.y - 13);
+    if (origin >= 0 && origin <= width) {
+      axisLabel("xᵤ", Math.min(width - 16, Math.max(16, origin)), 15);
+    }
     return (x, y) => ({
       word: strips.find(({left, right, above}) =>
         (y === view.y || above === (y < view.y)) && x >= place(left) && x <= place(right))?.word ?? null
