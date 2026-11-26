@@ -38,7 +38,29 @@ function containsTriangle(point, vertices) {
   return signs.every(sign => sign >= -1e-12) || signs.every(sign => sign <= 1e-12);
 }
 
-export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, camera = null) {
+export function toPoincare([x, y]) {
+  const gap = 1 - x*x - y*y;
+  const divisor = 1 + (gap > 1e-14 ? Math.sqrt(gap) : 0);
+  return [x / divisor, y / divisor];
+}
+
+export function toKlein([x, y]) {
+  const factor = 2 / (1 + x*x + y*y);
+  return [factor * x, factor * y];
+}
+
+export function poincareCircle([ax, ay], [bx, by]) {
+  const dx = bx - ax, dy = by - ay;
+  const length = Math.hypot(dx, dy);
+  if (!length) return null;
+  // Invert the foot of the Klein chord to find the orthogonal circle's center.
+  const distance = (dx * ay - dy * ax) / length;
+  if (Math.abs(distance) < 1e-6) return null;
+  return {center: [-dy / length / distance, dx / length / distance],
+    radius: Math.sqrt(Math.max(0, 1 - distance*distance)) / Math.abs(distance)};
+}
+
+export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, camera = null, projection = "klein") {
   const ctx = plot.getContext("2d");
   const {width, height} = plot.getBoundingClientRect();
   if (width === 0 || height === 0) return () => null;
@@ -55,6 +77,7 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
     return (x, y) => ({word: pickSphere(x, y)});
   }
   const project = model.rank === 3 ? slice(model).project : null;
+  const poincare = model.family === "Hyperbolic" && projection === "poincare";
   const limit = limitRays(model);
   function pathFan(start, sweep) {
     ctx.beginPath();
@@ -198,16 +221,39 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
     return [view.x + view.radius * x, view.y + view.radius * y];
   }
 
+  function display(point) {
+    return scale(poincare ? toPoincare(point) : point);
+  }
+
+  function arcEdge(a, b, start, end) {
+    const circle = poincareCircle(a, b);
+    if (!circle) {
+      ctx.lineTo(...end);
+      return;
+    }
+    const [x, y] = scale(circle.center);
+    const startAngle = Math.atan2(start[1] - y, start[0] - x);
+    const endAngle = Math.atan2(end[1] - y, end[0] - x);
+    const sweep = wrap(endAngle - startAngle + Math.PI) - Math.PI;
+    ctx.arc(x, y, circle.radius * view.radius, startAngle, startAngle + sweep, sweep < 0);
+  }
+
   function triangle(chamber) {
     return chamber.rays.map(project);
   }
 
   function paintTriangle(chamber) {
-    const points = triangle(chamber).map(scale);
+    const vertices = triangle(chamber);
+    const points = vertices.map(display);
     const selected = chamber.word === word;
     ctx.beginPath();
     ctx.moveTo(...points[0]);
-    points.slice(1).forEach(point => ctx.lineTo(...point));
+    if (poincare) {
+      vertices.forEach((vertex, i) => {
+        const next = (i + 1) % vertices.length;
+        arcEdge(vertex, vertices[next], points[i], points[next]);
+      });
+    } else points.slice(1).forEach(point => ctx.lineTo(...point));
     ctx.closePath();
     ctx.fillStyle = selected ? (word ? palette.current : palette.currentOnHome)
       : chamber.word === "" ? palette.fundamental : "rgba(68, 135, 137, .32)";
@@ -216,15 +262,15 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
     ctx.lineWidth = selected ? 1.6 : .8;
     ctx.stroke();
     if (selected || chamber.word === "") {
-      const x = points.reduce((sum, point) => sum + point[0], 0) / 3;
-      const y = points.reduce((sum, point) => sum + point[1], 0) / 3;
+      const x = vertices.reduce((sum, point) => sum + point[0], 0) / 3;
+      const y = vertices.reduce((sum, point) => sum + point[1], 0) / 3;
       const shortEdge = points.some(([a, b], i) => Math.hypot(a - points[(i + 1) % 3][0], b - points[(i + 1) % 3][1]) < 32);
-      if (!shortEdge) text(chamber.word || "C", x, y, selected ? palette.dark : palette.label);
+      if (!shortEdge) text(chamber.word || "C", ...display([x, y]), selected ? palette.dark : palette.label);
       if (selected && !shortEdge) {
-        points.forEach((_, i) => {
-          const a = points[(i + 1) % 3], b = points[(i + 2) % 3];
+        vertices.forEach((_, i) => {
+          const a = vertices[(i + 1) % 3], b = vertices[(i + 2) % 3];
           const midX = (a[0] + b[0]) / 2, midY = (a[1] + b[1]) / 2;
-          text(symbols[i], .83 * midX + .17 * x, .83 * midY + .17 * y, palette.dark);
+          text(symbols[i], ...display([.83 * midX + .17 * x, .83 * midY + .17 * y]), palette.dark);
         });
       }
     }
@@ -252,7 +298,7 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
       for (const ray of chamber.rays) {
         const point = project(ray);
         if (Math.abs(Math.hypot(...point) - 1) > 1e-9) continue;
-        const [x, y] = scale(point);
+        const [x, y] = display(point);
         ctx.beginPath();
         ctx.arc(x, y, 1.6, 0, tau);
         ctx.fillStyle = chamber.word === word ? "#ffe2a7" : palette.line;
@@ -287,6 +333,8 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
   if (model.rank === 2) return (x, y) => pickFan(x - view.x, y - view.y);
   return (x, y) => {
     const point = [(x - view.x) / view.radius, (y - view.y) / view.radius];
-    return {word: chambers.find(chamber => containsTriangle(point, triangle(chamber)))?.word ?? null};
+    if (poincare && Math.hypot(...point) > 1 + 1e-12) return {word: null};
+    const klein = poincare ? toKlein(point) : point;
+    return {word: chambers.find(chamber => containsTriangle(klein, triangle(chamber)))?.word ?? null};
   };
 }

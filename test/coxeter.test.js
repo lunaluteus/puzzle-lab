@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { braidMoves, buildGallery, exampleById, examples, limitRays, probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
+import { poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
 import { exampleFormulae, gramEntry } from "../src/coxeter/formulas.js";
 
 function close(a, b) {
@@ -152,6 +153,41 @@ test("affine A2 and the ideal triangle have the expected growth", () => {
     idealTotal += ideal[depth];
     assert.equal(idealTotal, 1 + 3 * (2 ** depth - 1));
   }
+});
+
+test("Poincaré geodesics round-trip to Klein chords and preserve finite corner angles", () => {
+  const dot = (a, b) => a.reduce((sum, x, i) => sum + x * b[i], 0);
+  const tangent = (from, to) => {
+    const [x, y] = toPoincare(from);
+    const [u, v] = toPoincare(to);
+    const circle = poincareCircle(from, to);
+    const chord = [u - x, v - y];
+    if (!circle) return chord;
+    const [cx, cy] = circle.center;
+    assert.ok(close(Math.hypot(x - cx, y - cy), circle.radius));
+    assert.ok(close(Math.hypot(u - cx, v - cy), circle.radius));
+    assert.ok(close(cx*cx + cy*cy - circle.radius**2, 1));
+    const vector = [cy - y, x - cx];
+    return dot(vector, chord) < 0 ? vector.map(value => -value) : vector;
+  };
+  for (const model of examples.filter(example => example.family === "Hyperbolic")) {
+    const {project} = slice(model);
+    const angles = vertexAngles(model);
+    const {rays} = buildGallery(model).list[0];
+    const points = rays.map(project);
+    for (const [i, point] of points.entries()) {
+      const restored = toKlein(toPoincare(point));
+      assert.ok(restored.every((value, j) => close(value, point[j])));
+      if (!angles[i]) {
+        assert.ok(close(Math.hypot(...toPoincare(point)), 1));
+        continue;
+      }
+      const a = tangent(point, points[(i + 1) % 3]);
+      const b = tangent(point, points[(i + 2) % 3]);
+      assert.ok(close(Math.acos(dot(a, b) / (Math.hypot(...a) * Math.hypot(...b))), angles[i]));
+    }
+  }
+  assert.equal(poincareCircle([-.5, 0], [.5, 0]), null);
 });
 
 test("hemisphere clipping keeps front vertices and adds intersections on the horizon", () => {

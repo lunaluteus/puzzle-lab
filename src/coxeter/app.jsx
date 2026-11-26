@@ -23,7 +23,8 @@ function initialView() {
   const depth = Math.max(word.length, budgetDepth);
   const zoom = Number(query.get("zoom"));
   const camera = model.family === "Spherical" ? decodeSphereCamera(query.get("camera")) : null;
-  return { id: model.id, word, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera };
+  const projection = model.family === "Hyperbolic" && query.get("projection") === "poincare" ? "poincare" : "klein";
+  return { id: model.id, word, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection };
 }
 
 function PointProbe({model, point}) {
@@ -46,7 +47,7 @@ function PointProbe({model, point}) {
   </p>;
 }
 
-function Plot({model, chambers, word, zoom, camera, setCamera, choose, cross}) {
+function Plot({model, chambers, word, zoom, camera, projection, setCamera, choose, cross}) {
   const canvas = useRef(null);
   const pick = useRef(null);
   const drag = useRef(null);
@@ -56,12 +57,14 @@ function Plot({model, chambers, word, zoom, camera, setCamera, choose, cross}) {
   const plotCamera = previewCamera ?? camera;
 
   useLayoutEffect(() => {
-    const redraw = () => { pick.current = drawPlot(canvas.current, model, chambers, word, zoom, point, plotCamera); };
+    const redraw = () => {
+      pick.current = drawPlot(canvas.current, model, chambers, word, zoom, point, plotCamera, projection);
+    };
     redraw();
     const observer = new ResizeObserver(redraw);
     observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [model, chambers, word, zoom, point, plotCamera]);
+  }, [model, chambers, word, zoom, point, plotCamera, projection]);
 
   const centeredCamera = () => sphereCamera(chambers.find(chamber => chamber.word === word).rays.map(sphere(model)));
 
@@ -210,6 +213,13 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         <input id="zoom" type="range" min="1" max="4" step="0.25" value={view.zoom}
           onChange={event => update({zoom: Number(event.target.value)})} />
       </>}
+      {model.family === "Hyperbolic" && <div className="projection-control">
+        <label htmlFor="projection">Disk model</label>
+        <select id="projection" value={view.projection} onChange={event => update({projection: event.target.value})}>
+          <option value="klein">Klein</option>
+          <option value="poincare">Poincaré</option>
+        </select>
+      </div>}
       <p id="shape">{model.description}</p>
     </div>
     <div className="panel">
@@ -339,15 +349,18 @@ function Notes() {
     <p>For a finite rank-three example, normalize each positive ray using the dual metric <Formula latex={mathNotes.sphere} />.
       The resulting unit sphere is tiled by spherical triangles. The drawing shows one hemisphere.
       For affine and hyperbolic examples, h is the positive unit eigenvector for the smallest eigenvalue of B.
-      The slice <Formula latex={mathNotes.slice} /> is Euclidean in affine type and uses the Klein disk in hyperbolic type.
+      The slice <Formula latex={mathNotes.slice} /> is Euclidean in affine type and gives the Klein disk in hyperbolic type.
       A hyperbolic boundary point belongs to the sliced cone exactly when it is an ideal vertex of a chamber.
       The dashed boundary indicates the circle or limiting rays. The gallery depth controls how many chambers are drawn.</p>
     <p>Klein geodesics appear as straight chords. At an interior point p, measure angles using the
-      hyperbolic inner product <Formula latex={mathNotes.kleinMetric} />.</p>
+      hyperbolic inner product <Formula latex={mathNotes.kleinMetric} />.
+      Switch to the Poincaré disk to see the same chambers with their angles preserved.
+      The geodesics there are diameters or circular arcs orthogonal to the boundary.
+      {" "}<a href="?model=hurwitz&projection=poincare">Try the (2, 3, 7) triangle in Poincaré coordinates</a>.</p>
     <p><a href="https://people.math.osu.edu/davis.12/papers/SurveyKM.pdf">Rémy, Kac–Moody groups, §1.1</a>
       {" · "}<a href="https://personal.math.ubc.ca/~cass/coxeter/R.html">Casselman, Coxeter Groups I</a>
       {" · "}<a href="https://arxiv.org/abs/1305.0052">Hohlweg, Préaux and Ripoll, Lorentzian Coxeter groups</a>
-      {" · "}<a href="https://brice.loustau.eu/ressources/book.pdf">Loustau, Hyperbolic geometry, §8.2.3</a></p>
+      {" · "}<a href="https://brice.loustau.eu/ressources/book.pdf">Loustau, Hyperbolic geometry, §§8.2–10.1</a></p>
   </details>;
 }
 
@@ -376,6 +389,8 @@ function App() {
     else url.searchParams.set("zoom", view.zoom);
     if (view.camera) url.searchParams.set("camera", encodeSphereCamera(view.camera));
     else url.searchParams.delete("camera");
+    if (model.family === "Hyperbolic" && view.projection === "poincare") url.searchParams.set("projection", "poincare");
+    else url.searchParams.delete("projection");
     if (url.href !== location.href) history.replaceState(null, "", url);
   }, [view, model]);
 
@@ -387,11 +402,12 @@ function App() {
     </header>
     <div className="viewer">
       <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
-        camera={view.camera} setCamera={camera => update({camera})}
+        camera={view.camera} projection={view.projection} setCamera={camera => update({camera})}
         choose={choose} cross={wall => choose(neighbors[wall])} />
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
         update={update} choose={choose}
-        changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null})} />
+        changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null,
+          projection: view.projection})} />
     </div>
     <Inspector model={model} />
     <Notes />
