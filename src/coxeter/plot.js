@@ -39,7 +39,7 @@ function containsTriangle(point, vertices) {
 }
 
 
-export function drawPlot(plot, model, chambers, word, zoom = 1) {
+export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, camera = null) {
   const ctx = plot.getContext("2d");
   const {width, height} = plot.getBoundingClientRect();
   if (width === 0 || height === 0) return () => null;
@@ -51,7 +51,7 @@ export function drawPlot(plot, model, chambers, word, zoom = 1) {
     radius: .45 * Math.min(width, height) * zoom, far: Math.hypot(width, height)};
   ctx.fillStyle = palette.outside;
   ctx.fillRect(0, 0, width, height);
-  if (model.family === "Spherical") return drawSphere(ctx, view, model, chambers, word, palette);
+  if (model.family === "Spherical") return drawSphere(ctx, view, model, chambers, word, palette, camera);
   const project = model.rank === 3 ? slice(model).project : null;
   function pathFan(start, sweep) {
     ctx.beginPath();
@@ -211,6 +211,16 @@ export function drawPlot(plot, model, chambers, word, zoom = 1) {
 
   if (model.rank === 2) {
     paintFans();
+    if (point) {
+      const x = view.x + view.radius * point[0], y = view.y - view.radius * point[1];
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, tau);
+      ctx.fillStyle = "#fff6dd";
+      ctx.fill();
+      ctx.strokeStyle = palette.dark;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
   } else if (model.family === "Affine") {
     const extent = Math.max(...chambers.flatMap(chamber => triangle(chamber).map(vertex => Math.hypot(...vertex))));
     view.radius /= extent;

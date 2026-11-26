@@ -9,12 +9,30 @@ const unit = point => {
 };
 const mix = (a, b, t) => a.map((x, i) => x * (1 - t) + b[i] * t);
 
-function camera(vertices) {
-  const forward = unit(vertices[0].map((_, i) => vertices.reduce((sum, vertex) => sum + vertex[i], 0)));
+function center(vertices) {
+  return unit(vertices[0].map((_, i) => vertices.reduce((sum, vertex) => sum + vertex[i], 0)));
+}
+
+export function sphereCamera(vertices) {
+  const forward = center(vertices);
   const pole = Math.abs(forward[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
   const right = unit(cross(pole, forward));
   const up = cross(forward, right);
-  return point => [dot(right, point), -dot(up, point), dot(forward, point)];
+  return [right, up.map(x => -x), forward];
+}
+
+export function rotateSphereCamera(basis, dx, dy) {
+  const angle = Math.hypot(dx, dy);
+  if (!angle) return basis;
+  // Rotate in screen coordinates around the axis perpendicular to the drag.
+  const axis = [-dy / angle, dx / angle, 0];
+  const cosine = Math.cos(angle), sine = Math.sin(angle);
+  return basis[0].map((_, column) => {
+    const vector = basis.map(row => row[column]);
+    const perpendicular = cross(axis, vector);
+    const parallel = dot(axis, vector) * (1 - cosine);
+    return vector.map((value, row) => cosine * value + sine * perpendicular[row] + parallel * axis[row]);
+  }).map((_, row, columns) => columns.map(column => column[row]));
 }
 
 export function clipHemisphere(vertices) {
@@ -38,10 +56,11 @@ function contains(point, vertices) {
   });
 }
 
-export function drawSphere(ctx, view, model, chambers, word, palette) {
+export function drawSphere(ctx, view, model, chambers, word, palette, basis) {
   const project = sphere(model);
   const focus = chambers.find(chamber => chamber.word === word);
-  const orient = camera(focus.rays.map(project));
+  const camera = basis ?? sphereCamera(focus.rays.map(project));
+  const orient = point => camera.map(axis => dot(axis, point));
   const cells = chambers.map(chamber => ({word: chamber.word, vertices: chamber.rays.map(project).map(orient)}));
   const screen = ([x, y]) => [view.x + x * view.radius, view.y + y * view.radius];
 
@@ -71,15 +90,20 @@ export function drawSphere(ctx, view, model, chambers, word, palette) {
     ctx.lineWidth = selected ? 1.6 : .8;
     ctx.stroke();
     if (selected) {
+      const middle = center(vertices);
+      if (middle[2] < 0) return;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.font = "600 13px system-ui, sans-serif";
       ctx.fillStyle = palette.dark;
-      ctx.fillText(label.length > 7 ? "wC" : label || "C", view.x, view.y);
+      const [cx, cy] = screen(middle);
+      ctx.fillText(label.length > 7 ? "wC" : label || "C", cx, cy);
       for (const [i, s] of symbols.entries()) {
-        const middle = mix(vertices[(i + 1) % 3], vertices[(i + 2) % 3], .5);
-        const [x, y] = screen(unit(mix([0, 0, 1], middle, .78)));
-        if (Math.hypot(x - view.x, y - view.y) >= 17) ctx.fillText(s, x, y);
+        const edge = mix(vertices[(i + 1) % 3], vertices[(i + 2) % 3], .5);
+        const target = unit(mix(middle, edge, .78));
+        if (target[2] < 0) continue;
+        const [x, y] = screen(target);
+        if (Math.hypot(x - cx, y - cy) >= 17) ctx.fillText(s, x, y);
       }
     }
   }

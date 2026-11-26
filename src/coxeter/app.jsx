@@ -1,13 +1,17 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { buildGallery, exampleById, examples, limitRays, wallNames } from "./model.js";
+import { buildGallery, exampleById, examples, limitRays, probeRankTwo, sphere, wallNames } from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
+import { rotateSphereCamera, sphereCamera } from "./spherical.js";
 import maths from "virtual:coxeter-math";
 
 const defaultId = "indefinite";
 const orderLabel = order => order === Infinity ? "∞" : order;
 const families = [...new Set(examples.map(model => model.family))];
+const rotationKeys = new Map([
+  ["ArrowLeft", [-.16, 0]], ["ArrowRight", [.16, 0]], ["ArrowUp", [0, -.16]], ["ArrowDown", [0, .16]]
+]);
 
 function initialView() {
   const query = new URLSearchParams(location.search);
@@ -21,26 +25,101 @@ function initialView() {
   return { id: model.id, word, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1 };
 }
 
+function PointProbe({model, point}) {
+  let description = "Click anywhere in the plane to probe a point.";
+  if (point) {
+    const result = probeRankTwo(model, point);
+    switch (result.kind) {
+      case "origin": description = "The origin belongs to every closed chamber."; break;
+      case "outside": description = "Outside the Tits cone."; break;
+      case "limit": description = "At the limit boundary to plotting precision."; break;
+      case "inside":
+        if (result.distance === null) description = "Inside the Tits cone, close to its limit boundary.";
+        else description = (result.onWall ? "On a chamber wall." : "Inside the Tits cone.")
+          + " Gallery distance " + result.distance + ".";
+        break;
+    }
+  }
+  return <p className="point-probe" role="status">
+    {point && <b>({point.map(x => Number(x.toFixed(3))).join(", ")}) · </b>}{description}
+  </p>;
+}
+
 function Plot({model, chambers, word, zoom, choose, cross}) {
   const canvas = useRef(null);
   const pick = useRef(null);
+  const drag = useRef(null);
+  const [point, setPoint] = useState(null);
+  const [camera, setCamera] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const spherical = model.family === "Spherical";
+
   useLayoutEffect(() => {
-    const redraw = () => { pick.current = drawPlot(canvas.current, model, chambers, word, zoom); };
+    const redraw = () => { pick.current = drawPlot(canvas.current, model, chambers, word, zoom, point, camera); };
     redraw();
     const observer = new ResizeObserver(redraw);
     observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [model, chambers, word, zoom]);
+  }, [model, chambers, word, zoom, point, camera]);
+
+  const centeredCamera = () => sphereCamera(chambers.find(chamber => chamber.word === word).rays.map(sphere(model)));
+
+  function selectAt(event) {
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - box.left, y = event.clientY - box.top;
+    if (model.rank === 2) {
+      const unit = .45 * Math.min(box.width, box.height) * zoom;
+      setPoint([(x - box.width / 2) / unit, (box.height / 2 - y) / unit]);
+    }
+    const next = pick.current?.(x, y);
+    if (next !== null && next !== undefined) choose(next);
+  }
+
+  function endDrag(event) {
+    if (drag.current?.id !== event.pointerId) return;
+    drag.current = null;
+    setDragging(false);
+  }
 
   return <figure>
     <canvas id="plot" ref={canvas} tabIndex="0"
-      aria-label="Coxeter chambers. Click a chamber or press a generator key to cross a wall."
+      className={spherical ? "sphere" : undefined} data-dragging={dragging}
+      aria-label={spherical
+        ? "Coxeter chambers. Drag or use the arrow keys to rotate. Tap or click to select."
+        : "Coxeter chambers. Click a chamber or press a generator key to cross a wall."}
       onPointerDown={event => {
-        const box = event.currentTarget.getBoundingClientRect();
-        const next = pick.current?.(event.clientX - box.left, event.clientY - box.top);
-        if (next !== null && next !== undefined) choose(next);
+        if (!event.isPrimary || event.button !== 0) return;
+        if (!spherical) return selectAt(event);
+        const {width, height} = event.currentTarget.getBoundingClientRect();
+        drag.current = {id: event.pointerId, x: event.clientX, y: event.clientY,
+          scale: 3 / Math.min(width, height), basis: camera ?? centeredCamera(), moved: false};
+        event.currentTarget.setPointerCapture(event.pointerId);
       }}
+      onPointerMove={event => {
+        const active = drag.current;
+        if (!active || active.id !== event.pointerId) return;
+        const dx = event.clientX - active.x, dy = event.clientY - active.y;
+        if (!active.moved) {
+          if (Math.hypot(dx, dy) < 4) return;
+          active.moved = true;
+          setDragging(true);
+        }
+        setCamera(rotateSphereCamera(active.basis, dx * active.scale, dy * active.scale));
+      }}
+      onPointerUp={event => {
+        if (drag.current?.id !== event.pointerId) return;
+        if (!drag.current.moved) selectAt(event);
+        endDrag(event);
+      }}
+      onPointerCancel={endDrag}
+      onLostPointerCapture={endDrag}
       onKeyDown={event => {
+        const rotation = spherical && rotationKeys.get(event.key);
+        if (rotation) {
+          event.preventDefault();
+          setCamera(current => rotateSphereCamera(current ?? centeredCamera(), ...rotation));
+          return;
+        }
         const s = event.key.toLowerCase();
         if (wallNames(model).includes(s)) {
           event.preventDefault();
@@ -52,8 +131,12 @@ function Plot({model, chambers, word, zoom, choose, cross}) {
       <span><i className="selected" /> Selected chamber</span>
       {(model.family === "Hyperbolic" || limitRays(model)) &&
         <span id="limit-key"><i className="limit" /> Limit boundary</span>}
-      {model.family === "Spherical" && <span>Hemisphere centered on the selected chamber</span>}
+      {spherical && <span className="sphere-controls">
+        Drag or use arrow keys to rotate.
+        <button type="button" disabled={!camera} onClick={() => setCamera(null)}>Center on selection</button>
+      </span>}
     </figcaption>
+    {model.rank === 2 && <PointProbe model={model} point={point} />}
   </figure>;
 }
 
@@ -217,7 +300,7 @@ function App() {
       <p>Reflect chambers in the dual plane, on the sphere of rays, and in Euclidean or hyperbolic slices.</p>
     </header>
     <div className="viewer">
-      <Plot model={model} chambers={chambers} word={view.word} zoom={view.zoom}
+      <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
         choose={choose} cross={wall => choose(neighbors[wall])} />
       <Controls model={model} view={view} count={chambers.length} neighbors={neighbors}
         update={update} choose={choose} changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth})} />

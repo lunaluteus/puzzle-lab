@@ -222,3 +222,37 @@ export function limitRays(example) {
   const a = 1 / (c + Math.sqrt(c * c - 1));
   return [[-a, 1], [1, -a]];
 }
+
+export function probeRankTwo(example, point) {
+  const tolerance = 1e-12;
+  const norm = Math.hypot(...point);
+  if (norm <= tolerance) return {kind: "origin"};
+  const [x, y] = point.map(value => value / norm);
+  const limits = limitRays(example);
+  if (limits) {
+    const a = -limits[0][0];
+    const inward = Math.min(x + a*y, y + a*x);
+    if (inward < -tolerance) return {kind: "outside"};
+    if (inward <= tolerance) return {kind: "limit"};
+  }
+  if (example.family === "Affine") {
+    // On x + y = 1, the two reflections take u to −u and 2 − u.
+    const u = point[0] / (point[0] + point[1]);
+    const nearest = Math.round(u);
+    const onWall = Math.abs(u - nearest) <= Math.max(tolerance, 8 * Number.EPSILON * Math.abs(u));
+    const interval = onWall ? nearest - Number(nearest > 0) : Math.floor(u);
+    return {kind: "inside", distance: Math.abs(interval), onWall};
+  }
+
+  let folded = [x, y];
+  for (let distance = 0; distance <= 80; distance++) {
+    const negative = folded.findIndex(value => value < -tolerance);
+    if (negative === -1) {
+      return {kind: "inside", distance, onWall: folded.some(value => Math.abs(value) <= tolerance)};
+    }
+    const next = reflect(folded, symbols[negative], example);
+    const scale = Math.hypot(...next);
+    folded = next.map(value => value / scale);
+  }
+  return {kind: "inside", distance: null};
+}

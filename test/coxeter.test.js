@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildGallery, exampleById, examples, limitRays, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
-import { clipHemisphere } from "../src/coxeter/spherical.js";
+import { buildGallery, exampleById, examples, limitRays, probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
+import { clipHemisphere, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { exampleFormulae, gramEntry } from "../src/coxeter/formulas.js";
 
 function close(a, b) {
@@ -137,6 +137,45 @@ test("hemisphere clipping keeps front vertices and adds intersections on the hor
   assert.equal(visible.slice(2).filter(point => point[2] === 0).length, 2);
   assert.ok(visible.every(point => close(Math.hypot(...point), 1)));
   assert.deepEqual(clipHemisphere(points.map(([x, y]) => [x, y, -1])), []);
+});
+
+test("sphere rotation sends the center in the drag direction and keeps the camera orthonormal", () => {
+  const basis = sphereCamera([[0, 0, 1], [0, 0, 1], [0, 0, 1]]);
+  const horizontal = rotateSphereCamera(basis, Math.PI / 2, 0);
+  const vertical = rotateSphereCamera(basis, 0, Math.PI / 2);
+  assert.ok(close(horizontal[0][2], 1));
+  assert.ok(close(vertical[1][2], 1));
+  assert.ok(close(horizontal[2][2], 0));
+  assert.ok(close(vertical[2][2], 0));
+
+  const turned = rotateSphereCamera(basis, .3, -.8);
+  for (const [i, a] of turned.entries()) {
+    for (const [j, b] of turned.entries()) {
+      const dot = a.reduce((sum, x, k) => sum + x * b[k], 0);
+      assert.ok(close(dot, Number(i === j)));
+    }
+  }
+  const restored = rotateSphereCamera(turned, -.3, .8);
+  assert.ok(restored.every((row, i) => row.every((value, j) => close(value, basis[i][j]))));
+});
+
+test("rank-two probes get the distance from chamber interiors and distinguish limiting rays", () => {
+  for (const model of examples.filter(example => example.rank === 2)) {
+    for (const {word, rays} of buildGallery(model).list.filter(chamber => chamber.word.length <= 7)) {
+      const [[a, b], [c, d]] = rays.map(ray => ray.map(value => value / Math.hypot(...ray)));
+      assert.deepEqual(probeRankTwo(model, [a + c, b + d]),
+        {kind: "inside", distance: word.length, onWall: false}, model.id + " " + word);
+    }
+    assert.deepEqual(probeRankTwo(model, [0, 0]), {kind: "origin"});
+    for (const ray of limitRays(model) ?? []) {
+      assert.deepEqual(probeRankTwo(model, ray), {kind: "limit"});
+      assert.deepEqual(probeRankTwo(model, [-1, -1]), {kind: "outside"});
+    }
+  }
+  const affine = exampleById.get("affine");
+  for (const point of [[-1000000, 1000001], [1000001, -1000000]]) {
+    assert.deepEqual(probeRankTwo(affine, point), {kind: "inside", distance: 1000000, onWall: true});
+  }
 });
 
 test("matrix entries and angle deficits stay exact in the inspector", () => {

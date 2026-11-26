@@ -27,12 +27,16 @@
   .viewer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(226px, 266px); gap: 14px; align-items: start; }
   figure { margin: 0; min-width: 0; }
   canvas { display: block; width: 100%; aspect-ratio: 1.16; max-height: min(68vh, 620px); background: var(--plot); border-radius: 12px; cursor: crosshair; touch-action: manipulation; }
+  canvas.sphere { cursor: grab; touch-action: none; }
+  canvas.sphere[data-dragging="true"] { cursor: grabbing; }
   figcaption { display: flex; gap: 6px 16px; flex-wrap: wrap; padding: 10px 2px 0; color: var(--muted); font-size: .82rem; }
   figcaption span { display: inline-flex; align-items: center; gap: 6px; }
   figcaption i { width: 12px; height: 12px; border: 1px solid #126c60; border-radius: 3px; }
   figcaption .fundamental { background: #47aaa6; }
   figcaption .selected { background: #efb755; border-color: #9e6627; }
   figcaption .limit { border-style: dashed; border-color: #637983; }
+  figcaption .sphere-controls { flex-basis: 100%; flex-wrap: wrap; justify-content: space-between; }
+  .point-probe { margin: 9px 0 0; color: var(--muted); font-size: .85rem; }
   figcaption [hidden], button[hidden] { display: none; }
   aside { display: grid; gap: 14px; }
   .panel { padding: 14px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; }
