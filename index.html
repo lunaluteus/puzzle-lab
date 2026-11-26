@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="在浏览器里玩环灯、分数 24 点和三格轮转。">
+<meta name="description" content="在浏览器里玩环灯、分数 24 点、三格轮转，探索 Tits 锥。">
 <title>Luna 的谜题桌</title>
 <style>
   :root { color-scheme: light; --ink: #213931; --muted: #50655b; --paper: #f7f4e9; }
@@ -44,6 +44,8 @@
   .lamp-scene { background: #233026; }
   .card-scene { background: #255044; }
   .tile-scene { background: #463856; }
+  .cone-scene { background: #14232d; }
+  .cone-fan { width: 105px; aspect-ratio: 1; border-radius: 50%; background: conic-gradient(#60b3a4 0deg 35deg, #efb755 35deg 92deg, #3b8988 92deg 135deg, #315963 135deg 155deg, transparent 155deg 295deg, #315963 295deg 315deg, #3b8988 315deg 360deg); }
   .lamps { display: grid; grid-template-columns: repeat(7, 1fr); gap: clamp(6px, 2vw, 13px); }
   .lamps span {
     width: clamp(16px, 4vw, 26px);
@@ -114,6 +116,15 @@
         <div class="caption">
           <h2>三格轮转</h2>
           <p>每次轮转相邻三格，把数字排回原位。</p>
+        </div>
+      </a>
+    </li>
+    <li>
+      <a class="puzzle" href="tits-cone.html" lang="en">
+        <div class="illustration cone-scene" aria-hidden="true"><div class="cone-fan"></div></div>
+        <div class="caption">
+          <h2>The Tits Cone</h2>
+          <p>Reflect Coxeter chambers and compare finite, affine, and hyperbolic examples.</p>
         </div>
       </a>
     </li>
