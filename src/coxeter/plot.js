@@ -182,11 +182,18 @@ export function drawPlot(plot, model, chambers, word, {
     }
     ctx.setLineDash([]);
     const current = fans.find(chamber => chamber.word === word);
-    current.rays.forEach((ray, i) => {
-      const angle = Math.atan2(-ray[1], ray[0]);
-      const [x, y] = rayEnd(angle, view.radius * .57);
+    const markerRadius = 8;
+    const minimumSpacing = 2 * markerRadius + 4;
+    const availableRadius = Math.min(view.x, view.y) - markerRadius - minimumSpacing / 2 - 8;
+    const labelRadius = Math.max(minimumSpacing / 2, Math.min(view.radius * .57, availableRadius));
+    const angles = current.rays.map(([x, y]) => Math.atan2(-y, x));
+    const [a, b] = angles.map(angle => rayEnd(angle, labelRadius));
+    // Stagger along the wall rays so even coincident screen directions retain both labels.
+    const offset = Math.hypot(a[0] - b[0], a[1] - b[1]) < minimumSpacing ? minimumSpacing / 2 : 0;
+    angles.forEach((angle, i) => {
+      const [x, y] = rayEnd(angle, labelRadius + (i ? offset : -offset));
       ctx.beginPath();
-      ctx.arc(x, y, 8, 0, tau);
+      ctx.arc(x, y, markerRadius, 0, tau);
       ctx.fillStyle = palette.outside;
       ctx.fill();
       text(symbols[1 - i], x, y, "#ffe2a7");
