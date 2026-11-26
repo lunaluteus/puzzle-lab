@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { braidMoves, buildGallery, exampleById, examples, limitRays, probeRankTwo, sphere, wallNames } from "./model.js";
+import { braidMoves, buildGallery, dihedralModels, exampleById, limitRays, presets, probeRankTwo, sphere, wallNames } from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
 import { decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "./spherical.js";
@@ -8,7 +8,7 @@ import maths from "virtual:coxeter-math";
 
 const defaultId = "indefinite";
 const orderLabel = order => order === Infinity ? "∞" : order;
-const families = [...new Set(examples.map(model => model.family))];
+const families = [...new Set(presets.map(model => model.family))];
 const rotationKeys = new Map([
   ["ArrowLeft", [-.16, 0]], ["ArrowRight", [.16, 0]], ["ArrowUp", [0, -.16]], ["ArrowDown", [0, .16]]
 ]);
@@ -193,10 +193,18 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
       <label htmlFor="model">Coxeter example</label>
       <select id="model" value={model.id} onChange={event => changeModel(event.target.value)}>
         {families.map(family => <optgroup key={family} label={family}>
-          {examples.filter(example => example.family === family).map(example =>
+          {presets.filter(example => example.family === family).map(example =>
             <option key={example.id} value={example.id}>{example.title}</option>)}
+          {model.family === family && !presets.includes(model) &&
+            <option value={model.id}>{model.title}</option>}
         </optgroup>)}
       </select>
+      {model.family === "Finite dihedral" && <>
+        <label className="depth-label" htmlFor="dihedral-order">Order of st</label>
+        <select id="dihedral-order" value={model.id} onChange={event => changeModel(event.target.value)}>
+          {dihedralModels.map(example => <option key={example.id} value={example.id}>{example.exponents[0][1]}</option>)}
+        </select>
+      </>}
       <label className="depth-label" htmlFor="depth">
         Gallery depth <output id="depth-value">{view.depth}</output>
       </label>
@@ -316,7 +324,7 @@ function Notes() {
     <p><strong>Rank one.</strong> A₁ consists of a single reflection and the identity.
       Its chambers are the two closed half-lines. <a href="?model=a1">Try A₁</a>.</p>
     <p><strong>Rank two.</strong> The single label determines the dihedral system <Formula latex={mathNotes.dihedral} />.
-      The finite presets run from <Formula latex={mathNotes.dihedralPresets} />.
+      The order selector lets you explore <Formula latex={mathNotes.dihedralOrders} />.
       With <Formula latex={mathNotes.infiniteDihedral} />, the presets use the same infinite dihedral group
       with different Gram entries <Formula latex={mathNotes.dihedralCoupling} />.
       At c = 1, the Tits cone is an open half-plane together with the origin.

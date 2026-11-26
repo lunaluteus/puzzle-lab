@@ -39,7 +39,7 @@ function spherical(id, title, [st, tu, us], order, max) {
     { depth: max, max });
 }
 
-export const examples = [
+export const presets = [
   model("a1", "A₁ · one mirror", "Finite line", [[1]],
     "The origin is the mirror. The two chambers cover the dual line.", {depth: 1, max: 1}),
   dihedral("orthogonal", "A₁ × A₁ · m = 2", 2),
@@ -84,6 +84,13 @@ export const examples = [
     "An ideal triangle with all three corners on the circle. Ideal vertices of reflected chambers belong to the slice.")
 ];
 
+export const maxDihedralOrder = 24;
+const moreDihedralModels = Array.from({length: maxDihedralOrder - 8}, (_, index) => {
+  const order = index + 9;
+  return dihedral("i2-" + order, "I₂(" + order + ")", order);
+});
+export const examples = [...presets, ...moreDihedralModels];
+export const dihedralModels = examples.filter(example => example.family === "Finite dihedral");
 export const exampleById = new Map(examples.map(example => [example.id, example]));
 export const wallNames = example => symbols.slice(0, example.rank);
 

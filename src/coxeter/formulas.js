@@ -1,4 +1,4 @@
-import { slice, wallNames } from "./model.js";
+import { maxDihedralOrder, slice, wallNames } from "./model.js";
 
 const tex = String.raw;
 const radicals = new Map([
@@ -56,7 +56,7 @@ export function exampleFormulae(example) {
 
 export const mathNotes = {
   dihedral: tex`I_2(m)`,
-  dihedralPresets: tex`m=2,\ldots,8`,
+  dihedralOrders: tex`m=2,\ldots,${maxDihedralOrder}`,
   infiniteDihedral: tex`m=\infty`,
   dihedralCoupling: tex`B_{st}=-c,\quad c\ge 1`,
   triangleOrders: tex`(p,q,r)=(m_{st},m_{tu},m_{us})`,
