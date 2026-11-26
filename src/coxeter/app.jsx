@@ -43,6 +43,27 @@ function initialView() {
   return { id: model.id, word, destination, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection, coordinates, point };
 }
 
+function viewUrl(view, model, url = new URL(location.href)) {
+  url.searchParams.set("model", view.id);
+  if (view.depth === model.depth) url.searchParams.delete("depth");
+  else url.searchParams.set("depth", view.depth);
+  if (view.word) url.searchParams.set("word", view.word);
+  else url.searchParams.delete("word");
+  if (view.destination) url.searchParams.set("destination", view.destination);
+  else url.searchParams.delete("destination");
+  if (view.point) url.searchParams.set("point", view.point.join(","));
+  else url.searchParams.delete("point");
+  if (view.zoom === 1) url.searchParams.delete("zoom");
+  else url.searchParams.set("zoom", view.zoom);
+  if (view.camera) url.searchParams.set("camera", encodeSphereCamera(view.camera));
+  else url.searchParams.delete("camera");
+  if (model.family === "Hyperbolic" && view.projection === "poincare") url.searchParams.set("projection", "poincare");
+  else url.searchParams.delete("projection");
+  if (model.family === "Finite dihedral" && view.coordinates === "euclidean") url.searchParams.set("coordinates", "euclidean");
+  else url.searchParams.delete("coordinates");
+  return url;
+}
+
 function PointProbe({model, point, euclidean, setPoint}) {
   const metric = euclidean ? dihedralMetric(model) : null;
   const displayedPoint = point && metric ? metric.forward(point) : point;
@@ -198,7 +219,28 @@ function GallerySteps({route, byWord, word, label, onStep}) {
   </ol>;
 }
 
-function ShortestGallery({model, word, destination, followingGallery, onStep}) {
+function CopyRouteLink({href}) {
+  const [status, setStatus] = useState("");
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(href);
+      setStatus("copied");
+    } catch {
+      setStatus("manual");
+    }
+  }
+  return <>
+    <div className="tools">
+      <button type="button" onClick={copy}>Copy route link</button>
+      <span role="status">{status === "copied" ? "Link copied. The route opens at C."
+        : status === "manual" ? "Select and copy the URL below." : ""}</span>
+    </div>
+    {status === "manual" && <input className="route-link" aria-label="Route URL" readOnly value={href}
+      onFocus={event => event.currentTarget.select()} />}
+  </>;
+}
+
+function ShortestGallery({model, word, destination, followingGallery, onStep, routeHref}) {
   const details = useRef(null);
   useEffect(() => {
     if (followingGallery && details.current) details.current.open = true;
@@ -221,6 +263,7 @@ function ShortestGallery({model, word, destination, followingGallery, onStep}) {
     </> : translation ? <p>Follow the two wall crossings from <var>C</var>. Together they translate the
       starting chamber two units {destination === "st" ? "left" : "right"}.</p>
       : <p>Each letter crosses one wall.</p>}
+    <CopyRouteLink key={routeHref} href={routeHref} />
   </details>;
 }
 
@@ -242,6 +285,8 @@ function GalleryGrowth({counts, depth}) {
 
 function Controls({model, view, count, countsByLength, neighbors, update, choose, changeModel, changeCoupling}) {
   const destination = view.destination ?? view.word;
+  const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
+    model, new URL(location.pathname, location.href)).href : null;
   return <aside aria-label="Chamber controls">
     <div className="panel">
       <label htmlFor="model">Coxeter example</label>
@@ -331,7 +376,7 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         {" · "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare su and us</a>
       </p>}
       <ShortestGallery model={model} word={view.word} destination={destination} followingGallery={Boolean(view.destination)}
-        onStep={word => update({word, destination})} />
+        onStep={word => update({word, destination})} routeHref={routeHref} />
       <p>{view.word.length === model.max && !["Finite line", "Finite dihedral", "Spherical"].includes(model.family)
         ? "Gallery limit reached. Cross back or select another chamber."
         : "Click a chamber, cross a wall, or focus the plot and use the generator keys."}</p>
@@ -558,24 +603,7 @@ function App() {
   };
 
   useEffect(() => {
-    const url = new URL(location.href);
-    url.searchParams.set("model", view.id);
-    if (view.depth === model.depth) url.searchParams.delete("depth");
-    else url.searchParams.set("depth", view.depth);
-    if (view.word) url.searchParams.set("word", view.word);
-    else url.searchParams.delete("word");
-    if (view.destination) url.searchParams.set("destination", view.destination);
-    else url.searchParams.delete("destination");
-    if (view.point) url.searchParams.set("point", view.point.join(","));
-    else url.searchParams.delete("point");
-    if (view.zoom === 1) url.searchParams.delete("zoom");
-    else url.searchParams.set("zoom", view.zoom);
-    if (view.camera) url.searchParams.set("camera", encodeSphereCamera(view.camera));
-    else url.searchParams.delete("camera");
-    if (model.family === "Hyperbolic" && view.projection === "poincare") url.searchParams.set("projection", "poincare");
-    else url.searchParams.delete("projection");
-    if (model.family === "Finite dihedral" && view.coordinates === "euclidean") url.searchParams.set("coordinates", "euclidean");
-    else url.searchParams.delete("coordinates");
+    const url = viewUrl(view, model);
     if (url.href !== location.href) history.replaceState(null, "", url);
   }, [view, model]);
 
