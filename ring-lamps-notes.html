@@ -49,6 +49,17 @@
     <h1>为什么最难要按 10 次？</h1>
     <p class="intro">在 21 盏灯的圆环上，按第 <var>i</var> 盏会翻转 <var>i</var>、<var>i</var>+1、<var>i</var>+3 三盏。所有有解的开局都能在 10 次内关完，其中有 <strong>2,187 局</strong>正好需要 10 次。</p>
 
+    <section id="solvability" aria-labelledby="solvability-heading">
+      <h2 id="solvability-heading">怎样判断一个开局有没有解？</h2>
+      <p>在二元域 𝔽₂ 上，把亮灯记为 1、灭灯记为 0，得到灯态向量 <var>b</var>。矩阵 <var>A</var> 的第 <var>j</var> 列记录按第 <var>j</var> 盏灯会翻转哪些灯。按两次会抵消，因此按键向量 <var>p</var> 只需记每盏灯是否按过奇数次。关掉所有灯就是解 <var>Ap</var> = <var>b</var>。</p>
+      <p>环灯的无解提示会圈出一组灯。把这组灯的指示向量记作 <var>w</var>。<var>w</var><sup>T</sup><var>A</var> = 0 表示每次操作都翻转其中偶数盏，<var>w</var><sup>T</sup><var>b</var> = 1 表示开局有奇数盏亮着。这个奇偶性一直保持，所以无法全灭。对无解的增广矩阵做行消元会得到 0 = 1，得到这一行的组合系数就是一个这样的 <var>w</var>。</p>
+      <p>试试六盏灯里只有 1 号灯亮的开局：</p>
+      <ul>
+        <li><a href="ring-lamps.html?size=6&amp;rule=consecutive&amp;span=3&amp;lights=1">连续翻三盏</a>。每次操作恰好翻转 1、2、4、5 号灯中的两盏。这四盏中起初只有一盏亮着，所以无解。</li>
+        <li><a href="ring-lamps.html?size=6&amp;rule=spaced&amp;lights=1">隔着翻三盏</a>。按 2、5、6 号灯即可全灭，这局只有这一组按键。</li>
+      </ul>
+    </section>
+
     <h2>先把按键写成多项式</h2>
     <p>按同一盏灯两次会抵消，顺序也不影响结果，所以每盏灯只需记「按」或「不按」。从 0 编号，把按键集合写成 <var>P</var>，每按第 <var>i</var> 盏就给 <var>P</var> 加一项 <var>x</var><sup><var>i</var></sup>。亮灯集合也用同样的办法记。</p>
     <p>在二元域 𝔽₂ 上，翻灯的效果就是用 <var>f</var> = 1 + <var>x</var> + <var>x</var><sup>3</sup> 乘 <var>P</var>。灯环有 <var>n</var> 盏，所以乘完把 <var>x</var><sup><var>n</var></sup> 当作 1。<var>f</var> 是不可约三次多项式，根在八元域里，乘法阶为 7。因此，只有 <var>n</var> 是 7 的倍数时，才可能有两种不同按法做出同一个开局。</p>
