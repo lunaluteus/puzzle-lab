@@ -40,7 +40,12 @@ function initialView() {
   const projection = model.family === "Hyperbolic" && query.get("projection") === "poincare" ? "poincare" : "klein";
   const coordinates = model.family === "Finite dihedral" && query.get("coordinates") === "euclidean" ? "euclidean" : "dual";
   const point = model.rank === 2 ? decodePoint(query.get("point")) : null;
-  return { id: model.id, word, destination, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection, coordinates, point };
+  const cumulativeGrowth = query.get("growth") === "cumulative";
+  const logarithmicGrowth = query.get("growth-scale") === "log";
+  return {
+    id: model.id, word, destination, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1,
+    camera, projection, coordinates, point, cumulativeGrowth, logarithmicGrowth
+  };
 }
 
 function viewUrl(view, model, url = new URL(location.href)) {
@@ -61,6 +66,10 @@ function viewUrl(view, model, url = new URL(location.href)) {
   else url.searchParams.delete("projection");
   if (model.family === "Finite dihedral" && view.coordinates === "euclidean") url.searchParams.set("coordinates", "euclidean");
   else url.searchParams.delete("coordinates");
+  if (view.cumulativeGrowth) url.searchParams.set("growth", "cumulative");
+  else url.searchParams.delete("growth");
+  if (view.logarithmicGrowth) url.searchParams.set("growth-scale", "log");
+  else url.searchParams.delete("growth-scale");
   return url;
 }
 
@@ -276,9 +285,20 @@ function ShortestGallery({model, word, destination, followingGallery, onStep, ro
   </details>;
 }
 
-function GalleryGrowth({counts, depth, changeDepth}) {
-  const [logarithmic, setLogarithmic] = useState(false);
-  const [cumulative, setCumulative] = useState(false);
+function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, update}) {
+  const details = useRef(null);
+  useEffect(() => {
+    function followGrowthLink() {
+      if (location.hash !== "#growth-chart") return;
+      const chart = details.current;
+      chart.open = true;
+      chart.scrollIntoView();
+    }
+    followGrowthLink();
+    window.addEventListener("hashchange", followGrowthLink);
+    return () => window.removeEventListener("hashchange", followGrowthLink);
+  }, []);
+
   const scale = logarithmic ? Math.log1p : count => count;
   let total = 0;
   const values = cumulative ? counts.map(count => {
@@ -290,16 +310,16 @@ function GalleryGrowth({counts, depth, changeDepth}) {
     const quantity = count + (count === 1 ? " chamber" : " chambers");
     return cumulative ? "Depth " + length + ", " + quantity + " in total" : "Length " + length + ", " + quantity;
   });
-  return <details className="gallery-growth">
+  return <details id="growth-chart" className="gallery-growth" ref={details}>
     <summary>{cumulative ? "Chambers through depth" : "Chambers by length"}</summary>
     <p>Choose a bar to set the gallery depth.</p>
     <div className="growth-options">
       <label className="growth-scale" title="Bar heights use log(1 + count) when enabled.">
-        <input type="checkbox" checked={logarithmic} onChange={event => setLogarithmic(event.target.checked)} />
+        <input type="checkbox" checked={logarithmic} onChange={event => update({logarithmicGrowth: event.target.checked})} />
         Log scale
       </label>
       <label>
-        <input type="checkbox" checked={cumulative} onChange={event => setCumulative(event.target.checked)} />
+        <input type="checkbox" checked={cumulative} onChange={event => update({cumulativeGrowth: event.target.checked})} />
         Cumulative
       </label>
     </div>
@@ -381,7 +401,8 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         onChange={event => changeDepth(Number(event.target.value))} />
       <p id="count">{count} {count === 1 ? "chamber" : "chambers"}
         {model.family === "Spherical" ? " in gallery" : " drawn"}</p>
-      <GalleryGrowth counts={countsByLength} depth={view.depth} changeDepth={changeDepth} />
+      <GalleryGrowth counts={countsByLength} depth={view.depth} changeDepth={changeDepth} update={update}
+        cumulative={view.cumulativeGrowth} logarithmic={view.logarithmicGrowth} />
       {model.rank === 3 && <>
         <label className="depth-label" htmlFor="zoom">Zoom <output>{view.zoom}×</output></label>
         <input id="zoom" type="range" min="1" max="4" step="0.25" value={view.zoom}
@@ -601,18 +622,18 @@ function Notes({notesRef}) {
       At depth <var>d</var>, the gallery contains <Formula latex={mathNotes.growthTotal} /> chambers.
       Turn on <strong>Cumulative</strong> in the chart to see those totals.</p>
     <ul>
-      <li><a href="?model=a1-i2-infinity&amp;depth=6">Affine half-strips</a> have <Formula latex={mathNotes.growthProduct} />.
+      <li><a href="?model=a1-i2-infinity&amp;depth=6&amp;growth=cumulative#growth-chart">Affine half-strips</a> have <Formula latex={mathNotes.growthProduct} />.
         For length two or more, choose one of the two alternating dihedral words of length <var>n</var>,
         or use length <var>n</var> − 1 and include the commuting reflection <var>u</var>.</li>
-      <li><a href="?model=affine2&amp;depth=6">Affine Ã₂</a> has <Formula latex={mathNotes.growthAffine} />.
+      <li><a href="?model=affine2&amp;depth=6&amp;growth=cumulative#growth-chart">Affine Ã₂</a> has <Formula latex={mathNotes.growthAffine} />.
         These are the positive-degree coefficients of <Formula latex={mathNotes.growthAffineSeries} />.
         {" "}<a href="https://sites.math.washington.edu/~billey/classes/reflection.groups/references/EntireBook.pdf">Björner and Brenti, §7.1</a>.</li>
-      <li><a href="?model=ideal&amp;depth=6">The ideal triangle</a> has <Formula latex={mathNotes.growthIdeal} />.
+      <li><a href="?model=ideal&amp;depth=6&amp;growth=cumulative&amp;growth-scale=log#growth-chart">The ideal triangle</a> has <Formula latex={mathNotes.growthIdeal} />.
         There are three choices for the first reflection and two at each later step, since only adjacent equal
         letters cancel. The reduced word is unique.</li>
     </ul>
-    <p>At depth six, these galleries contain 24, 64, and 190 chambers, respectively. In the ideal example,
-      turn on <strong>Log scale</strong> to see the earliest layers alongside the later ones.</p>
+    <p>At depth six, these galleries contain 24, 64, and 190 chambers, respectively. The ideal example
+      opens on a logarithmic scale so the earliest layers are visible alongside the later ones.</p>
     <h2>Coordinates and boundaries</h2>
     <p>Write <Formula latex={mathNotes.coordinate} /> in the dual of the simple-root space.
       The fundamental chamber is <Formula latex={mathNotes.chamber} />, and the Tits cone is <Formula latex={mathNotes.cone} />.
@@ -681,8 +702,9 @@ function App() {
         choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} />
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
         update={update} choose={choose} changeCoupling={changeCoupling}
-        changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null, point: null,
-          projection: view.projection, coordinates: view.coordinates})} />
+        changeModel={id => setView(current => ({
+          ...current, id, word: "", destination: null, zoom: 1, depth: exampleById.get(id).depth, camera: null, point: null
+        }))} />
     </div>
     <Inspector model={model} coordinates={view.coordinates} chamber={chamber} />
     <Notes notesRef={notes} />
