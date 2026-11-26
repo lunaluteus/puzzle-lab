@@ -53,7 +53,7 @@
       <h2 id="solvability-heading">怎样判断一个开局有没有解？</h2>
       <p>在二元域 𝔽₂ 上，把亮灯记为 1、灭灯记为 0，得到灯态向量 <var>b</var>。矩阵 <var>A</var> 的第 <var>j</var> 列记录按第 <var>j</var> 盏灯会翻转哪些灯。按两次会抵消，因此按键向量 <var>p</var> 只需记每盏灯是否按过奇数次。关掉所有灯就是解 <var>Ap</var> = <var>b</var>。</p>
       <p>环灯的无解提示会圈出一组灯。把这组灯的指示向量记作 <var>w</var>。<var>w</var><sup>T</sup><var>A</var> = 0 表示每次操作都翻转其中偶数盏，<var>w</var><sup>T</sup><var>b</var> = 1 表示开局有奇数盏亮着。这个奇偶性一直保持，所以无法全灭。对无解的增广矩阵做行消元会得到 0 = 1，得到这一行的组合系数就是一个这样的 <var>w</var>。</p>
-      <p>试试六盏灯里只有 1 号灯亮的开局：</p>
+      <p>六盏灯里只有 1 号灯亮时，可解性取决于翻灯规则。</p>
       <ul>
         <li><a href="ring-lamps.html?size=6&amp;rule=consecutive&amp;span=3&amp;lights=1">连续翻三盏</a>。每次操作恰好翻转 1、2、4、5 号灯中的两盏。这四盏中起初只有一盏亮着，所以无解。</li>
         <li><a href="ring-lamps.html?size=6&amp;rule=spaced&amp;lights=1">隔着翻三盏</a>。按 2、5、6 号灯即可全灭，这局只有这一组按键。</li>
