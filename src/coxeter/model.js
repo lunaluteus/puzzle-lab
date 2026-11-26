@@ -117,8 +117,16 @@ const moreTriangleModels = Array.from({length: maxTriangleOrder - 7}, (_, index)
 export const triangleSeries = [...presets, ...moreTriangleModels]
   .filter(example => example.rank === 3 && example.exponents[0][1] === 2 && example.exponents[1][2] === 3)
   .sort((a, b) => a.exponents[0][2] - b.exponents[0][2]);
+const productPresets = presets.filter(example =>
+  example.rank === 3 && example.exponents[0][2] === 2 && example.exponents[1][2] === 2);
+export const dihedralProductModels = Array.from({length: maxDihedralOrder - 1}, (_, index) => {
+  const m = index + 2;
+  return productPresets.find(example => example.exponents[0][1] === m) ??
+    spherical("a1-i2-" + m, "A₁ × I₂(" + m + ") · (" + m + ", 2, 2)", [m, 2, 2], 4 * m, m + 1);
+});
 export const examples = [...presets, ...moreDihedralModels,
-  ...infiniteDihedralModels.filter(example => !infinitePresets.includes(example)), ...moreTriangleModels];
+  ...infiniteDihedralModels.filter(example => !infinitePresets.includes(example)), ...moreTriangleModels,
+  ...dihedralProductModels.filter(example => !productPresets.includes(example))];
 export const dihedralModels = examples.filter(example => example.family === "Finite dihedral");
 export const exampleById = new Map(examples.map(example => [example.id, example]));
 export const wallNames = example => symbols.slice(0, example.rank);

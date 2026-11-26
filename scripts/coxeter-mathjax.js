@@ -6,13 +6,14 @@ import { SVG } from "@mathjax/src/js/output/svg.js";
 import "@mathjax/src/js/input/tex/base/BaseConfiguration.js";
 import "@mathjax/src/js/input/tex/ams/AmsConfiguration.js";
 import "@mathjax/src/js/util/asyncLoad/esm.js";
-import { examples, presets, triangleSeries } from "../src/coxeter/model.js";
+import { dihedralProductModels, examples, presets, triangleSeries } from "../src/coxeter/model.js";
 import { exampleFormulae, mathNotes } from "../src/coxeter/formulas.js";
 
 const virtualId = "virtual:coxeter-math";
 const supplementalId = "virtual:coxeter-extra-math";
 const triangleId = "virtual:coxeter-triangle-math";
-const moduleIds = new Set([virtualId, supplementalId, triangleId]);
+const productId = "virtual:coxeter-product-math";
+const moduleIds = new Set([virtualId, supplementalId, triangleId, productId]);
 
 async function typeset() {
   const adapter = liteAdaptor({fontSize: 16});
@@ -24,22 +25,29 @@ async function typeset() {
       OutputJax: output
     });
     const collect = models => models.flatMap(example => Object.values(exampleFormulae(example)).filter(Boolean));
-    const initial = new Set([...Object.values(mathNotes), ...collect(presets)]);
-    const deferred = new Set(collect(examples.filter(example => !triangleSeries.includes(example))));
-    const formulas = new Set([...initial, ...deferred, ...collect(triangleSeries)]);
-    const standard = {}, supplemental = {}, triangles = {};
-    for (const tex of formulas) {
-      const node = await document.convertPromise(tex, {display: false, em: 16, ex: 8});
-      const target = initial.has(tex) ? standard : deferred.has(tex) ? supplemental : triangles;
-      target[tex] = adapter.outerHTML(node);
+    const groups = [
+      [triangleId, collect(triangleSeries)],
+      [productId, collect(dihedralProductModels)],
+      [supplementalId, collect(examples.filter(example => !triangleSeries.includes(example) && !dihedralProductModels.includes(example)))]
+    ];
+    const initial = [...Object.values(mathNotes), ...collect(presets)];
+    const owner = new Map(initial.map(tex => [tex, virtualId]));
+    for (const [id, formulas] of groups) {
+      for (const tex of new Set(formulas)) {
+        // Keep shared formulas with the presets so opening one series needs only its own deferred module.
+        owner.set(tex, owner.has(tex) ? virtualId : id);
+      }
     }
-    // Both deferred modules reference the glyph cache with the initial formulas.
+    const modules = Object.fromEntries([...moduleIds].map(id => [id, {}]));
+    for (const [tex, id] of owner) {
+      const node = await document.convertPromise(tex, {display: false, em: 16, ex: 8});
+      modules[id][tex] = adapter.outerHTML(node);
+    }
+    // Every module references the glyph cache with the initial formulas.
     const glyphs = adapter.outerHTML(output.pageElements(document));
-    return {
-      [virtualId]: {formulas: standard, glyphs, triangleFormulaKeys: Object.keys(triangles)},
-      [supplementalId]: supplemental,
-      [triangleId]: triangles
-    };
+    const deferred = Object.fromEntries([...owner].filter(([, id]) => id !== virtualId));
+    modules[virtualId] = {formulas: modules[virtualId], glyphs, deferred};
+    return modules;
   } finally {
     mathjax.handlers.unregister(handler);
   }

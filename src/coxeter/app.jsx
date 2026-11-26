@@ -1,8 +1,9 @@
 import React, { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels, exampleById, infiniteDihedralModels,
-  limitRays, maxTriangleOrder, presets, probeRankTwo, sphere, triangleSeries, wallNames
+  braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels, dihedralProductModels, exampleById,
+  infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder, presets, probeRankTwo, sphere,
+  triangleSeries, wallNames
 } from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
@@ -266,6 +267,14 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
           </option>)}
         </select>
       </>}
+      {dihedralProductModels.includes(model) && <>
+        <label className="depth-label" htmlFor="product-order">Order of st</label>
+        <select id="product-order" value={model.id} onChange={event => changeModel(event.target.value)}>
+          {dihedralProductModels.map(example => <option key={example.id} value={example.id}>
+            {example.exponents[0][1]}
+          </option>)}
+        </select>
+      </>}
       <label className="depth-label" htmlFor="depth">
         Gallery depth <output id="depth-value">{view.depth}</output>
       </label>
@@ -341,21 +350,27 @@ function FormulaMarkup({latex, label, html}) {
     dangerouslySetInnerHTML={html ? {__html: html} : undefined}>{html ? null : latex}</span>;
 }
 
-const triangleFormulaKeys = new Set(maths.triangleFormulaKeys);
-let supplementalFormulas, triangleFormulas;
-function SupplementalFormula(props) {
-  const loading = triangleFormulaKeys.has(props.latex)
-    ? (triangleFormulas ??= import("virtual:coxeter-triangle-math").then(module => module.default, () => ({})))
-    : (supplementalFormulas ??= import("virtual:coxeter-extra-math").then(module => module.default, () => ({})));
-  const formulas = use(loading);
+const deferredCatalogs = new Map(Object.entries(maths.deferred));
+const catalogImports = {
+  "virtual:coxeter-extra-math": () => import("virtual:coxeter-extra-math"),
+  "virtual:coxeter-triangle-math": () => import("virtual:coxeter-triangle-math"),
+  "virtual:coxeter-product-math": () => import("virtual:coxeter-product-math")
+};
+const catalogRequests = new Map();
+function SupplementalFormula({catalog, ...props}) {
+  if (!catalogRequests.has(catalog)) {
+    catalogRequests.set(catalog, catalogImports[catalog]().then(module => module.default, () => ({})));
+  }
+  const formulas = use(catalogRequests.get(catalog));
   return <FormulaMarkup {...props} html={formulas[props.latex]} />;
 }
 
 function Formula(props) {
   const html = maths.formulas[props.latex];
-  if (html) return <FormulaMarkup {...props} html={html} />;
+  const catalog = deferredCatalogs.get(props.latex);
+  if (html || !catalog) return <FormulaMarkup {...props} html={html} />;
   return <Suspense fallback={<FormulaMarkup {...props} />}>
-    <SupplementalFormula {...props} />
+    <SupplementalFormula {...props} catalog={catalog} />
   </Suspense>;
 }
 
@@ -452,6 +467,7 @@ function Notes({notesRef}) {
       {" "}<a href="?model=b3">Start at m = 4 and change the third order</a>.</p>
     <p>Disconnected diagrams give direct products. The rank-three products have the form
       <Formula latex={mathNotes.product} />, where m can also be infinite.
+      For the finite products, the selector varies the order m of st from 2 through {maxDihedralOrder}.
       In the m = 5 example, the diagram shows the two dihedral generators joined
       by a 5 edge. The isolated generator <var>u</var> reflects one hemisphere
       onto the other, with ten chambers on each side. <a href="?model=a1-i25">Try A₁ × I₂(5)</a>.
