@@ -412,7 +412,7 @@ function Notes({notesRef}) {
       Choose invariant Euclidean coordinates to see the chambers as sectors of equal angle.
       With <Formula latex={mathNotes.infiniteDihedral} />, the same infinite dihedral group has realizations
       with different Gram entries <Formula latex={mathNotes.dihedralCoupling} />.
-      The coupling selector varies c from 1 to 2 in steps of 1/20.
+      The coupling selector varies c from 1 to 2 in steps of 1/20. A probed point stays fixed in dual coordinates as c changes.
       At c = 1, the Tits cone is an open half-plane together with the origin.
       At c &gt; 1, it is an open wedge together with the origin, and its opening angle depends on c.</p>
     <p>Probe the same point (1, −0.6) in two realizations of the infinite dihedral group. It lies
@@ -480,7 +480,7 @@ function App() {
   const changeCoupling = id => {
     const maximum = exampleById.get(id).max;
     setView(current => ({
-      ...current, id, word: current.word.slice(0, maximum), depth: Math.min(current.depth, maximum), destination: null, point: null
+      ...current, id, word: current.word.slice(0, maximum), depth: Math.min(current.depth, maximum), destination: null
     }));
   };
 
