@@ -210,13 +210,22 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
 function GallerySteps({route, byWord, word, label, onStep}) {
   const steps = [""];
   for (const wall of route) steps.push(byWord.get(steps.at(-1)).neighbors[wall]);
-  return <ol className="gallery-steps" role="list" aria-label={label}>
-    {steps.map((step, i) => <li key={step}>
-      <button type="button" aria-current={step === word ? "step" : undefined}
-        aria-label={step ? "Step " + i + ", " + step.split("").join(" ") + " C" : "Fundamental chamber C"}
-        onClick={() => onStep(step)}>{route[i - 1] ?? "C"}</button>
-    </li>)}
-  </ol>;
+  const current = steps.indexOf(word);
+  return <>
+    <ol className="gallery-steps" role="list" aria-label={label}>
+      {steps.map((step, i) => <li key={step}>
+        <button type="button" aria-current={step === word ? "step" : undefined}
+          aria-label={step ? "Step " + i + ", " + step.split("").join(" ") + " C" : "Fundamental chamber C"}
+          onClick={() => onStep(step)}>{route[i - 1] ?? "C"}</button>
+      </li>)}
+    </ol>
+    <div className="tools" role="group" aria-label={label + " navigation"}>
+      <button type="button" disabled={current <= 0} onClick={() => onStep(steps[current - 1])}>Previous</button>
+      <button type="button" disabled={current === steps.length - 1} onClick={() => onStep(steps[current + 1])}>
+        {current < 0 ? "Start route" : "Next"}
+      </button>
+    </div>
+  </>;
 }
 
 function CopyRouteLink({href}) {
