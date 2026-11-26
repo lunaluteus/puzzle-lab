@@ -1,4 +1,5 @@
 import { limitRays, slice, symbols } from "./model.js";
+import { drawSphere } from "./spherical.js";
 
 const tau = 2 * Math.PI;
 const palette = {
@@ -48,6 +49,9 @@ export function drawPlot(plot, model, chambers, word, zoom = 1) {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   const view = {width, height, x: width / 2, y: height / 2,
     radius: .45 * Math.min(width, height) * zoom, far: Math.hypot(width, height)};
+  ctx.fillStyle = palette.outside;
+  ctx.fillRect(0, 0, width, height);
+  if (model.family === "Spherical") return drawSphere(ctx, view, model, chambers, word, palette);
   const project = model.rank === 3 ? slice(model).project : null;
   function pathFan(start, sweep) {
     ctx.beginPath();
@@ -205,8 +209,6 @@ export function drawPlot(plot, model, chambers, word, zoom = 1) {
   }
 
 
-  ctx.fillStyle = palette.outside;
-  ctx.fillRect(0, 0, width, height);
   if (model.rank === 2) {
     paintFans();
   } else if (model.family === "Affine") {

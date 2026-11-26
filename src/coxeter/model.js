@@ -1,16 +1,16 @@
 export const symbols = ["s", "t", "u"];
 
-function model(id, title, family, exponents, description, { depth = 4, max = 7, c } = {}) {
+function model(id, title, family, exponents, description, { depth = 4, max = 7, coupling } = {}) {
   const rank = exponents.length;
   const gram = exponents.map((row, i) => row.map((m, j) => {
     if (i === j) return 1;
-    if (c !== undefined) return -c;
+    if (coupling) return -coupling[0] / coupling[1];
     if (m === Infinity) return -1;
     if (m === 2) return 0;
     if (m === 3) return -0.5;
     return -Math.cos(Math.PI / m);
   }));
-  return { id, title, family, rank, exponents, gram, description, depth, max };
+  return { id, title, family, rank, exponents, gram, coupling, description, depth, max };
 }
 
 function dihedral(id, title, order) {
@@ -19,17 +19,24 @@ function dihedral(id, title, order) {
     { depth: order, max: order });
 }
 
-function infinite(id, title, c, description) {
+function infinite(id, title, coupling, description) {
+  const c = coupling[0] / coupling[1];
   // Hyperbolic rays converge exponentially in the fan. Stop short of rounding them together.
   const max = c === 1 ? 24 : Math.min(16, Math.floor(13 / Math.acosh(c)));
   return model(id, title, c === 1 ? "Affine" : "Indefinite",
     [[1, Infinity], [Infinity, 1]], description,
-    { c, depth: c === 1 ? 6 : 4, max });
+    { coupling, depth: c === 1 ? 6 : 4, max });
 }
 
 function triangle(id, title, family, [st, tu, us], description) {
   return model(id, title, family, [[1, st, us], [st, 1, tu], [us, tu, 1]], description,
     { depth: 4, max: family === "Affine" ? 9 : 7 });
+}
+
+function spherical(id, title, [st, tu, us], order, max) {
+  return model(id, title, "Spherical", [[1, st, us], [st, 1, tu], [us, tu, 1]],
+    "The Tits cone is the entire dual space. " + order + " chambers tile the sphere of rays.",
+    { depth: max, max });
 }
 
 export const examples = [
@@ -40,13 +47,17 @@ export const examples = [
   dihedral("g2", "G₂ · m = 6", 6),
   dihedral("i27", "I₂(7) · m = 7", 7),
   dihedral("i28", "I₂(8) · m = 8", 8),
-  infinite("affine", "Ã₁ · affine line", 1,
+  spherical("a1-cubed", "A₁ × A₁ × A₁ · (2, 2, 2)", [2, 2, 2], 8, 3),
+  spherical("a3", "A₃ · (2, 3, 3)", [2, 3, 3], 24, 6),
+  spherical("b3", "B₃ · (2, 3, 4)", [2, 3, 4], 48, 9),
+  spherical("h3", "H₃ · (2, 3, 5)", [2, 3, 5], 120, 15),
+  infinite("affine", "Ã₁ · affine line", [1, 1],
     "The Tits cone is the open half-plane xₛ + xₜ > 0 together with the origin."),
-  infinite("near-affine", "I₂(∞) · c = 1.05", 1.05,
+  infinite("near-affine", "I₂(∞) · c = 21/20", [21, 20],
     "A small change in the Gram matrix opens a gap between the two limit rays."),
-  infinite("indefinite", "I₂(∞) · c = 1.35", 1.35,
+  infinite("indefinite", "I₂(∞) · c = 27/20", [27, 20],
     "The Tits cone is an open wedge together with the origin. The limit rays are excluded."),
-  infinite("narrow", "I₂(∞) · c = 2", 2,
+  infinite("narrow", "I₂(∞) · c = 2", [2, 1],
     "A larger off-diagonal magnitude narrows the wedge in these dual coordinates."),
   triangle("affine2", "Ã₂ · (3, 3, 3)", "Affine", [3, 3, 3],
     "Equilateral triangles tile the entire Euclidean slice."),
@@ -188,6 +199,15 @@ export function slice(example) {
       const z = dot(height, point);
       return [scaleX * dot(horizontal, point) / z, scaleY * dot(vertical, point) / z];
     }
+  };
+}
+
+export function sphere(example) {
+  const axes = eigenbasis(example.gram);
+  return ray => {
+    const point = axes.map(({vector, value}) => dot(vector, ray) / Math.sqrt(value));
+    const length = Math.hypot(...point);
+    return point.map(component => component / length);
   };
 }
 

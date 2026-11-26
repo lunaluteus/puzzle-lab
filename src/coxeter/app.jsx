@@ -1,10 +1,11 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { buildGallery, exampleById, examples, limitRays, slice, vertexAngles, wallNames } from "./model.js";
+import { buildGallery, exampleById, examples, limitRays, wallNames } from "./model.js";
+import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
+import maths from "virtual:coxeter-math";
 
 const defaultId = "indefinite";
-const pretty = value => Number(value.toFixed(4));
 const orderLabel = order => order === Infinity ? "∞" : order;
 const families = [...new Set(examples.map(model => model.family))];
 
@@ -51,6 +52,7 @@ function Plot({model, chambers, word, zoom, choose, cross}) {
       <span><i className="selected" /> Selected chamber</span>
       {(model.family === "Hyperbolic" || limitRays(model)) &&
         <span id="limit-key"><i className="limit" /> Limit boundary</span>}
+      {model.family === "Spherical" && <span>Hemisphere centered on the selected chamber</span>}
     </figcaption>
   </figure>;
 }
@@ -73,7 +75,8 @@ function Controls({model, view, count, neighbors, update, choose, changeModel}) 
           const depth = Number(event.target.value);
           update({depth, word: view.word.length <= depth ? view.word : ""});
         }} />
-      <p id="count">{count} {count === 1 ? "chamber" : "chambers"} drawn</p>
+      <p id="count">{count} {count === 1 ? "chamber" : "chambers"}
+        {model.family === "Spherical" ? " in gallery" : " drawn"}</p>
       {model.rank === 3 && <>
         <label className="depth-label" htmlFor="zoom">Zoom <output>{view.zoom}×</output></label>
         <input id="zoom" type="range" min="1" max="4" step="0.25" value={view.zoom}
@@ -94,7 +97,7 @@ function Controls({model, view, count, neighbors, update, choose, changeModel}) 
       </div>
       <div className="tools"><button type="button" id="home" disabled={!view.word}
         onClick={() => choose("")}>Home chamber</button></div>
-      <p>{view.word.length === model.max && model.family !== "Finite dihedral"
+      <p>{view.word.length === model.max && !["Finite dihedral", "Spherical"].includes(model.family)
         ? "Gallery limit reached. Cross back or select another chamber."
         : "Click a chamber, cross a wall, or focus the plot and use the generator keys."}</p>
     </div>
@@ -122,44 +125,40 @@ function Diagram({model}) {
   </div>;
 }
 
+function Formula({latex, label}) {
+  return <span className="formula" role="math" data-tex={latex}
+    aria-label={label ? label + " " + latex : latex}
+    dangerouslySetInnerHTML={{__html: maths.formulas[latex]}} />;
+}
+
 function Inspector({model}) {
-  const walls = wallNames(model);
-  const angles = model.rank === 3 ? vertexAngles(model) : null;
-  const covector = model.rank === 3 ? slice(model).height : null;
-  const signature = {"Finite dihedral": "Positive definite", Affine: "Positive semidefinite",
+  const {relations, matrix, angles, area, covector, angle} = exampleFormulae(model);
+  const spherical = model.family === "Spherical";
+  const signature = {"Finite dihedral": "Positive definite", Spherical: "Positive definite", Affine: "Positive semidefinite",
     Indefinite: "Signature (1, 1)", Hyperbolic: "Signature (2, 1)"};
-  const pairs = walls.flatMap((a, i) => walls.slice(i + 1).map((b, k) =>
-    "m" + a + b + " = " + orderLabel(model.exponents[i][i + k + 1])));
   return <section className="inspector" aria-label="Coxeter data">
     <div className="panel data">
       <h2>Coxeter diagram</h2>
       <Diagram model={model} />
-      <p>{pairs.join(" · ")}</p>
+      <p><Formula latex={relations} /></p>
     </div>
     <div className="panel data">
       <h2>Gram matrix</h2>
-      <table className="matrix">
-        <thead><tr><th scope="col" aria-label="Generator" />{walls.map(w =>
-          <th key={w} scope="col">{w}</th>)}</tr></thead>
-        <tbody>{model.gram.map((row, i) => <tr key={walls[i]}>
-          <th scope="row">{walls[i]}</th>
-          {row.map((x, j) => <td key={walls[j]}>{pretty(x)}</td>)}
-        </tr>)}</tbody>
-      </table>
-      <p>{signature[model.family]}</p>
+      <div className="matrix"><Formula latex={matrix} label="Exact Gram matrix" /></div>
+      <p>{signature[model.family]}. Generator order {wallNames(model).join(", ")}.</p>
     </div>
     <div className="panel data">
-      <h2>{angles ? "Projective slice" : "The dual plane"}</h2>
+      <h2>{spherical ? "Sphere of rays" : angles ? "Projective slice" : "The dual plane"}</h2>
       {angles ? <>
-        <p>Corner angles {angles.map(x => pretty(x * 180 / Math.PI) + "°").join(", ")}</p>
+        <p>Corner angles <Formula latex={angles} /></p>
         {model.family === "Hyperbolic" &&
-          <p>Hyperbolic area {pretty(Math.PI - angles.reduce((a, b) => a + b, 0))} at curvature −1.</p>}
-        <p>Cut each ray at h · x = 1, with h ≈ ({covector.map(pretty).join(", ")}).</p>
+          <p>Hyperbolic area <Formula latex={area} /> at curvature −1.</p>}
+        {spherical && <p>Area on the unit sphere <Formula latex={area} /> sr.</p>}
+        {covector && <p>Slice <Formula latex={mathNotes.slice} /> with <Formula latex={covector} />.</p>}
       </> : <>
-        <p>Axes show x<sub>s</sub> and x<sub>t</sub> in the simple-root dual coordinates.</p>
-        {limitRays(model) ? <p>Limit rays
-          {" " + limitRays(model).map(ray => "(" + ray.map(pretty).join(", ") + ")").join(" and ")}.</p>
-          : <p>Mirror angle π/{model.exponents[0][1]} in the invariant Euclidean metric.</p>}
+        <p>Axes show <Formula latex={mathNotes.axes} /> in simple-root dual coordinates.</p>
+        {angle ? <p>Mirror angle <Formula latex={angle} /> in the invariant Euclidean metric.</p>
+          : <p>Limit rays <Formula latex={mathNotes.limit} />.</p>}
       </>}
     </div>
   </section>;
@@ -168,12 +167,14 @@ function Inspector({model}) {
 function Notes() {
   return <details>
     <summary>Coordinates, boundaries, and references</summary>
-    <p>Write x<sub>i</sub> = λ(α<sub>i</sub>) for λ in the dual of the simple-root space.
-      The closed fundamental chamber C has x<sub>i</sub> ≥ 0, and the Tits cone is the union of wC.
-      Crossing wall i of wC takes you to ws<sub>i</sub>C. In the dual coordinates,
-      crossing the fundamental i wall sends x<sub>j</sub> to x<sub>j</sub> − 2B<sub>ij</sub>x<sub>i</sub>.</p>
-    <p>For a rank-three example, h is the positive unit eigenvector for the smallest eigenvalue of B.
-      The slice is Euclidean in affine type and uses the Klein disk in hyperbolic type.
+    <p>Write <Formula latex={mathNotes.coordinate} /> in the dual of the simple-root space.
+      The fundamental chamber is <Formula latex={mathNotes.chamber} />, and the Tits cone is <Formula latex={mathNotes.cone} />.
+      Crossing wall i gives <Formula latex={mathNotes.crossing} />.
+      The fundamental reflection acts by <Formula latex={mathNotes.reflection} />.</p>
+    <p>For a finite rank-three example, normalize each positive ray using the dual metric <Formula latex={mathNotes.sphere} />.
+      The resulting unit sphere is tiled by spherical triangles. The drawing shows one hemisphere.
+      For affine and hyperbolic examples, h is the positive unit eigenvector for the smallest eigenvalue of B.
+      The slice <Formula latex={mathNotes.slice} /> is Euclidean in affine type and uses the Klein disk in hyperbolic type.
       A hyperbolic boundary point belongs to the sliced cone exactly when it is an ideal vertex of a chamber.
       The dashed boundary indicates the circle or limiting rays. The gallery depth controls how many chambers are drawn.</p>
     <p><a href="https://people.math.osu.edu/davis.12/papers/SurveyKM.pdf">Rémy, Kac–Moody groups, §1.1</a>
@@ -210,7 +211,7 @@ function App() {
     <header>
       <a href="index.html">Puzzle Lab</a>
       <h1>The Tits Cone</h1>
-      <p>Reflect chambers in the dual plane, or compare Euclidean and hyperbolic slices.</p>
+      <p>Reflect chambers in the dual plane, on the sphere of rays, and in Euclidean or hyperbolic slices.</p>
     </header>
     <div className="viewer">
       <Plot model={model} chambers={chambers} word={view.word} zoom={view.zoom}
@@ -223,4 +224,7 @@ function App() {
   </main>;
 }
 
-createRoot(document.getElementById("app")).render(<App />);
+createRoot(document.getElementById("app")).render(<>
+  <div aria-hidden="true" dangerouslySetInnerHTML={{__html: maths.glyphs}} />
+  <App />
+</>);
