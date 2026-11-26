@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三格轮转 · Luna 的谜题桌</title>
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #faf4e8;
+    --ink: #302944;
+    --muted: #615672;
+    --line: #d9cce1;
+    --board: #463856;
+    --active: #ffe3a5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100svh; color: var(--ink); background: #eee8f1; font: 1rem/1.6 system-ui, sans-serif; }
+  main { width: min(100% - 32px, 720px); margin: auto; padding: clamp(22px, 6vw, 60px) 0; }
+  h1 { margin: 16px 0 8px; font-size: clamp(2.25rem, 8vw, 4.6rem); line-height: 1.1; }
+  header p { margin: 0 0 20px; color: var(--muted); }
+  a { color: var(--muted); text-underline-offset: .18em; }
+  button, select { font: inherit; color: inherit; touch-action: manipulation; }
+  a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid #9d5633; outline-offset: 3px; }
+  button:disabled { opacity: .45; }
+  button:not(:disabled) { cursor: pointer; }
+  .controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .controls label { font-size: .875rem; color: var(--muted); }
+  .controls select { margin-inline-start: 4px; }
+  .controls select, .actions button { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 7px 12px; }
+  .table { padding: clamp(9px, 3vw, 22px); background: var(--board); border-radius: 15px; color: var(--paper); }
+  .tiles, .groups { display: grid; gap: clamp(3px, 1vw, 10px); }
+  .tile {
+    display: grid;
+    place-content: center;
+    min-height: 44px;
+    height: clamp(44px, 11vw, 87px);
+    border-radius: 8px;
+    background: var(--paper);
+    color: var(--ink);
+    font: 700 clamp(1.25rem, 5vw, 3.4rem)/1 Georgia, serif;
+  }
+  .tile.selected { background: var(--active); }
+  .groups { margin-top: 12px; }
+  .groups button, .rotate button { min-height: 38px; border: 1px solid #bba9c6; border-radius: 7px; background: #ffffff0d; color: var(--paper); }
+  .groups button { padding: 2px; font-size: .875rem; white-space: nowrap; }
+  .groups button[aria-pressed="true"], .rotate .hinted { background: var(--active); border-color: var(--active); color: var(--ink); }
+  .table button:focus-visible { outline-color: #f9dca4; }
+  .rotate { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  #status { margin: 12px 0 0; min-height: 1.6em; }
+  .actions { margin-top: 14px; display: flex; gap: 7px; flex-wrap: wrap; }
+  .actions #new { background: var(--board); color: var(--paper); border-color: var(--board); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a href="index.html">回谜题桌</a>
+    <h1>三格轮转</h1>
+    <p>把数字排成从小到大的顺序。每次选相邻三格，整体向左或向右轮转一格。</p>
+  </header>
+  <div class="controls">
+    <label>数字个数<select id="size">
+      <option>5</option><option>6</option><option selected>7</option><option>8</option>
+    </select></label>
+    <span>已走 <strong id="moves">0</strong> 步</span>
+  </div>
+  <section class="table" aria-label="轮转棋盘">
+    <div class="tiles" id="tiles" role="list" aria-label="当前数字顺序"></div>
+    <div class="groups" id="groups" role="group" aria-label="选择哪三格"></div>
+    <div class="rotate">
+      <button id="left" type="button">向左轮转</button>
+      <button id="right" type="button">向右轮转</button>
+    </div>
+    <p id="status" role="status"></p>
+  </section>
+  <div class="actions">
+    <button id="new" type="button">换一题</button>
+    <button id="hint" type="button">提示</button>
+    <button id="undo" type="button">撤销</button>
+    <button id="reset" type="button">重来</button>
+  </div>
+</main>
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const directions = { left: "向左", right: "向右" };
+const sizeControl = $("size");
+const tiles = $("tiles");
+const groups = $("groups");
+const solvers = new Map();
+let solver, board, initial, history, first, proposed, message;
+let tileElements, groupButtons;
+
+function rotate(state, i, direction) {
+  const a = state[i], b = state[i + 1], c = state[i + 2];
+  const triple = direction === "left" ? b + c + a : c + a + b;
+  return state.slice(0, i) + triple + state.slice(i + 3);
+}
+
+function solverFor(size) {
+  if (solvers.has(size)) return solvers.get(size);
+  const goal = Array.from({length: size}, (_, i) => i + 1).join("");
+  const states = [goal];
+  const hints = new Map([[goal, {remaining: 0}]]);
+  // A move recorded during the search is reversed to guide the player toward the goal.
+  for (let head = 0; head < states.length; head++) {
+    const state = states[head];
+    const remaining = hints.get(state).remaining + 1;
+    for (let i = 0; i < size - 2; i++) {
+      for (const direction of Object.keys(directions)) {
+        const next = rotate(state, i, direction);
+        if (hints.has(next)) continue;
+        const inverse = direction === "left" ? "right" : "left";
+        hints.set(next, {remaining, first: i, direction: inverse});
+        states.push(next);
+      }
+    }
+  }
+  const result = {goal, states, hints};
+  solvers.set(size, result);
+  return result;
+}
+
+function install(size) {
+  solver = solverFor(size);
+  const columns = n => "repeat(" + n + ", minmax(0, 1fr))";
+  tiles.style.gridTemplateColumns = columns(size);
+  groups.style.gridTemplateColumns = columns(size - 2);
+  tileElements = Array.from({length: size}, () => {
+    const span = document.createElement("span");
+    span.className = "tile";
+    span.setAttribute("role", "listitem");
+    return span;
+  });
+  groupButtons = Array.from({length: size - 2}, (_, i) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = (i + 1) + "–" + (i + 3);
+    button.setAttribute("aria-label", "第 " + (i + 1) + " 到 " + (i + 3) + " 格");
+    button.addEventListener("click", () => {
+      first = i;
+      proposed = null;
+      message = "";
+      render();
+    });
+    return button;
+  });
+  tiles.replaceChildren(...tileElements);
+  groups.replaceChildren(...groupButtons);
+  const sample = solver.goal[1] + solver.goal[0] + solver.goal.slice(2, -2)
+    + solver.goal.at(-1) + solver.goal.at(-2);
+  start(sample);
+}
+
+function render() {
+  const won = board === solver.goal;
+  tileElements.forEach((tile, i) => {
+    tile.textContent = board[i];
+    tile.classList.toggle("selected", !won && i >= first && i < first + 3);
+  });
+  groupButtons.forEach((button, i) => {
+    button.setAttribute("aria-pressed", String(!won && first === i));
+    button.disabled = won;
+  });
+  for (const direction of Object.keys(directions)) {
+    $(direction).disabled = won;
+    $(direction).classList.toggle("hinted", direction === proposed);
+  }
+  $("moves").textContent = history.length;
+  $("hint").disabled = won;
+  $("undo").disabled = $("reset").disabled = history.length === 0;
+  $("status").textContent = won ? "排好了！用了 " + history.length + " 步。" : message;
+}
+
+function start(state) {
+  initial = board = state;
+  history = [];
+  first = 0;
+  proposed = null;
+  message = "选一组三格，再选轮转方向。";
+  render();
+}
+
+function play(direction) {
+  history.push({board, first});
+  board = rotate(board, first, direction);
+  proposed = null;
+  message = "已轮转第 " + (first + 1) + " 到 " + (first + 3) + " 格。";
+  render();
+  if (board === solver.goal) $("new").focus();
+}
+
+$("left").addEventListener("click", () => play("left"));
+$("right").addEventListener("click", () => play("right"));
+$("hint").addEventListener("click", () => {
+  const option = solver.hints.get(board);
+  first = option.first;
+  proposed = option.direction;
+  message = "最少还要 " + option.remaining + " 步。把第 " + (first + 1) + " 到 " + (first + 3)
+    + " 格 " + directions[proposed] + " 轮转。";
+  render();
+});
+$("undo").addEventListener("click", () => {
+  ({board, first} = history.pop());
+  proposed = null;
+  message = "已撤销一步。";
+  render();
+});
+$("reset").addEventListener("click", () => start(initial));
+$("new").addEventListener("click", () => {
+  const choices = solver.states.filter(state => state !== solver.goal && state !== initial);
+  start(choices[Math.floor(Math.random() * choices.length)]);
+});
+sizeControl.addEventListener("change", () => install(Number(sizeControl.value)));
+install(Number(sizeControl.value));
+</script>
+</body>
+</html>
