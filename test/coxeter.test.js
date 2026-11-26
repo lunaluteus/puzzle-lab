@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { braidMoves, buildGallery, dihedralMetric, dihedralModels, exampleById, examples, limitRays, probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
+import { coxeterMath } from "../scripts/coxeter-mathjax.js";
+import {
+  braidMoves, buildGallery, dihedralMetric, dihedralModels, exampleById, examples, limitRays, presets,
+  probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames
+} from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
-import { exampleFormulae, gramEntry } from "../src/coxeter/formulas.js";
+import { exampleFormulae, gramEntry, mathNotes } from "../src/coxeter/formulas.js";
 
 function close(a, b) {
   return Math.abs(a - b) < 1e-8 * Math.max(1, Math.abs(a), Math.abs(b));
@@ -290,5 +294,38 @@ test("matrix entries and angle deficits stay exact in the inspector", () => {
     const {matrix} = exampleFormulae(example);
     assert.doesNotMatch(matrix, /\d\.\d/);
     assert.equal(matrix.split("\\\\").length, example.rank);
+  }
+});
+
+test("the MathJax modules contain every formula and resolve their shared glyphs", async () => {
+  const plugin = coxeterMath();
+  const prefix = "export default ";
+  const readModule = async specifier => {
+    const id = plugin.resolveId(specifier);
+    const source = await plugin.load(id);
+    assert.ok(source?.startsWith(prefix), specifier);
+    return JSON.parse(source.slice(prefix.length));
+  };
+  const [{formulas, glyphs}, supplemental] = await Promise.all([
+    readModule("virtual:coxeter-math"),
+    readModule("virtual:coxeter-extra-math")
+  ]);
+
+  const collect = models => models.flatMap(model => Object.values(exampleFormulae(model)).filter(Boolean));
+  const initial = new Set([...Object.values(mathNotes), ...collect(presets)]);
+  const deferred = new Set(collect(examples).filter(tex => !initial.has(tex)));
+  assert.ok(deferred.size > 0);
+  assert.deepEqual(new Set(Object.keys(formulas)), initial);
+  assert.deepEqual(new Set(Object.keys(supplemental)), deferred);
+
+  const glyphIds = Array.from(glyphs.matchAll(/\bid="([^"]+)"/g), match => match[1]);
+  const glyphCache = new Set(glyphIds);
+  assert.equal(glyphCache.size, glyphIds.length);
+  assert.ok(glyphCache.size > 0);
+  for (const [tex, html] of Object.entries({...formulas, ...supplemental})) {
+    assert.match(html, /<svg\b/, tex);
+    for (const [, reference] of html.matchAll(/<use\b[^>]*\bhref="#([^"]+)"/g)) {
+      assert.ok(glyphCache.has(reference), tex + " references missing glyph " + reference);
+    }
   }
 });
