@@ -323,6 +323,12 @@ test("the affine dihedral product tiles its slice by unit half-strips", () => {
   const point = [.25, .75, 2];
   assert.deepEqual(act(point, "st", affineDihedralProduct), [-1.75, 2.75, 2]);
   assert.deepEqual(act(point, "ts", affineDihedralProduct), [2.25, -1.25, 2]);
+  for (const wall of ["s", "t"]) {
+    const word = wall + "u";
+    assert.equal(byWord.get(wall).neighbors.u, word);
+    assert.equal(byWord.get("u").neighbors[wall], word);
+    assert.deepEqual(act(point, word, affineDihedralProduct), act(point, "u" + wall, affineDihedralProduct));
+  }
   assert.deepEqual(countsByLength, [1, 3, ...Array(affineDihedralProduct.max - 1).fill(4)]);
   for (const chamber of list) {
     const {left, right, above, sOnLeft} = affineProductStrip(chamber);

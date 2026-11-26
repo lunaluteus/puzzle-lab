@@ -215,6 +215,9 @@ function ShortestGallery({model, word, destination, followingGallery, onStep}) {
         {" = "}<code>{alternative.word.slice(alternative.index, alternative.index + alternative.length)}</code>
         {" "}gives another route to the same chamber in the same number of steps.</p>
       <GallerySteps route={alternative.word} byWord={byWord} word={word} label="Alternate shortest route" onStep={onStep} />
+      {model === affineDihedralProduct && (destination === "su" || destination === "tu") &&
+        <p>One step crosses a vertical wall and the other crosses xᵤ = 0. Try both routes to see the
+          same endpoint via different half-strips.</p>}
     </> : translation ? <p>Follow the two wall crossings from <var>C</var>. Together they translate the
       starting chamber two units {destination === "st" ? "left" : "right"}.</p>
       : <p>Each letter crosses one wall.</p>}
@@ -323,7 +326,10 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
       </div>
       <div className="tools"><button type="button" id="home" disabled={!view.word}
         onClick={() => choose("")}>Home chamber</button></div>
-      {model === affineDihedralProduct && <p><a href="?model=a1-i2-infinity&amp;destination=st">Trace the st translation</a></p>}
+      {model === affineDihedralProduct && <p>
+        <a href="?model=a1-i2-infinity&amp;destination=st">Trace the st translation</a>
+        {" · "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare su and us</a>
+      </p>}
       <ShortestGallery model={model} word={view.word} destination={destination} followingGallery={Boolean(view.destination)}
         onStep={word => update({word, destination})} />
       <p>{view.word.length === model.max && !["Finite line", "Finite dihedral", "Spherical"].includes(model.family)
@@ -501,6 +507,9 @@ function Notes({notesRef}) {
       <var>s</var> then <var>t</var> reaches <var>stC</var>.
       {" "}<a href="?model=a1-i2-infinity&amp;destination=st">Trace st to the left</a>
       {" or "}<a href="?model=a1-i2-infinity&amp;destination=ts">trace ts to the right</a>.</p>
+    <p>The horizontal mirror acts by <Formula latex={mathNotes.affineProductFlip} /> and keeps xₛ fixed.
+      The vertical mirrors leave xᵤ fixed, so these actions commute with <var>u</var>.
+      {" "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare the su and us routes</a>.</p>
     <p><a href="https://personal.math.ubc.ca/~cass/coxeter/crm1.html">Casselman on rank two and rank three</a>
       {" · "}<a href="https://people.math.osu.edu/davis.12/old_papers/djs2.pdf">Davis, Januszkiewicz and Scott on triangle groups, §7.3</a></p>
     <h2>Coordinates and boundaries</h2>
