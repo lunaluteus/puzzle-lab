@@ -1,7 +1,8 @@
-import { dihedralMetric, limitRays, slice, symbols } from "./model.js";
+import { affineDihedralProduct, affineProductStrip, dihedralMetric, limitRays, slice, symbols } from "./model.js";
 import { drawSphere } from "./spherical.js";
 
 const tau = 2 * Math.PI;
+const labelFont = "600 13px system-ui, sans-serif";
 const palette = {
   outside: "#14232d",
   interior: "#28444b",
@@ -78,7 +79,8 @@ export function drawPlot(plot, model, chambers, word, {
     const pickSphere = drawSphere(ctx, view, model, chambers, word, palette, camera);
     return (x, y) => ({word: pickSphere(x, y)});
   }
-  const project = model.rank === 3 ? slice(model).project : null;
+  const affineProduct = model === affineDihedralProduct;
+  const project = model.rank === 3 && !affineProduct ? slice(model).project : null;
   const poincare = model.family === "Hyperbolic" && projection === "poincare";
   const metric = model.family === "Finite dihedral" && coordinates === "euclidean" ? dihedralMetric(model) : null;
   const fans = metric ? chambers.map(chamber => ({...chamber, rays: chamber.rays.map(metric.forward)})) : chambers;
@@ -100,11 +102,48 @@ export function drawPlot(plot, model, chambers, word, {
   }
 
   function text(label, x, y, color, align = "center") {
-    ctx.font = "600 13px system-ui, sans-serif";
+    ctx.font = labelFont;
     ctx.textAlign = align;
     ctx.textBaseline = "middle";
     ctx.fillStyle = color;
     ctx.fillText(label, x, y);
+  }
+
+  if (affineProduct) {
+    const strips = chambers.map(chamber => ({...affineProductStrip(chamber), word: chamber.word}));
+    const min = Math.min(...strips.map(strip => strip.left));
+    const max = Math.max(...strips.map(strip => strip.right));
+    const step = Math.min(.86 * width / (max - min), .42 * height) * zoom;
+    const place = x => view.x + (x - (min + max) / 2) * step;
+    ctx.font = labelFont;
+    ctx.fillStyle = palette.interior;
+    ctx.fillRect(0, 0, width, height);
+
+    function paintStrip({left, right, above, word: chamberWord}) {
+      const a = place(left), b = place(right), edge = above ? 0 : height;
+      const selected = chamberWord === word;
+      ctx.fillStyle = selected ? (word ? palette.current : palette.currentOnHome)
+        : chamberWord === "" ? palette.fundamental : "rgba(68, 135, 137, .32)";
+      ctx.fillRect(a, Math.min(edge, view.y), step, Math.abs(edge - view.y));
+      const color = selected ? "#f8d18a" : palette.line;
+      const stroke = selected ? 1.6 : .8;
+      line([a, edge], [a, view.y], color, stroke);
+      line([a, view.y], [b, view.y], color, stroke);
+      line([b, view.y], [b, edge], color, stroke);
+      if ((selected || chamberWord === "") && ctx.measureText(chamberWord || "C").width + 16 < step) {
+        text(chamberWord || "C", (a + b) / 2, (view.y + edge) / 2, selected ? palette.dark : palette.label);
+      }
+    }
+
+    strips.filter(strip => strip.word !== word).forEach(paintStrip);
+    const selected = strips.find(strip => strip.word === word);
+    if (selected) paintStrip(selected);
+    text("xₛ", width - 10, view.y - 13, palette.label, "right");
+    text("xᵤ", 10, 15, palette.label, "left");
+    return (x, y) => ({
+      word: strips.find(({left, right, above}) =>
+        (y === view.y || above === (y < view.y)) && x >= place(left) && x <= place(right))?.word ?? null
+    });
   }
 
   if (model.rank === 1) {

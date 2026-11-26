@@ -1,7 +1,7 @@
 import React, { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels, dihedralProductModels, exampleById,
+  affineDihedralProduct, braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels, dihedralProductModels, exampleById,
   infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder, presets, probeRankTwo, sphere,
   triangleSeries, wallNames
 } from "./model.js";
@@ -271,7 +271,7 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         <label className="depth-label" htmlFor="product-order">Order of st</label>
         <select id="product-order" value={model.id} onChange={event => changeModel(event.target.value)}>
           {dihedralProductModels.map(example => <option key={example.id} value={example.id}>
-            {example.exponents[0][1]}
+            {orderLabel(example.exponents[0][1])}
           </option>)}
         </select>
       </>}
@@ -377,6 +377,7 @@ function Formula(props) {
 function Inspector({model, coordinates}) {
   const {relations, matrix, eigenvalues, angles, angleSum, area, covector, angle} = exampleFormulae(model);
   const spherical = model.family === "Spherical";
+  const affineProduct = model === affineDihedralProduct;
   const signature = {"Finite line": "Positive definite", "Finite dihedral": "Positive definite", Spherical: "Positive definite",
     Affine: "Positive semidefinite", Indefinite: "Signature (1, 1)", Hyperbolic: "Signature (2, 1)"};
   return <section className="inspector" aria-label="Coxeter data">
@@ -392,8 +393,13 @@ function Inspector({model, coordinates}) {
       {eigenvalues && <p>Eigenvalues <Formula latex={eigenvalues} label="Gram eigenvalues" />.</p>}
     </div>
     <div className="panel data">
-      <h2>{spherical ? "Sphere of rays" : angles ? "Projective slice" : model.rank === 1 ? "The dual line" : "The dual plane"}</h2>
+      <h2>{spherical ? "Sphere of rays" : angles || affineProduct ? "Projective slice" : model.rank === 1 ? "The dual line" : "The dual plane"}</h2>
       {model.rank === 1 ? <p>The positive half-line is the fundamental chamber. Reflecting across zero gives the other half-line. Both include zero.</p>
+      : affineProduct ? <>
+        <p>Slice <Formula latex={mathNotes.affineProductSlice} /> in coordinates <Formula latex={mathNotes.affineProductAxes} />.</p>
+        <p>The Tits cone consists of <Formula latex={mathNotes.affineProductPositiveHeight} /> and
+          the line <Formula latex={mathNotes.affineProductLine} /> at height zero.</p>
+      </>
       : angles ? <>
         <p>Intrinsic corner angles <Formula latex={angles} /></p>
         <p>Angle sum <Formula latex={angleSum} label="Triangle angle sum" />.</p>
@@ -471,7 +477,10 @@ function Notes({notesRef}) {
       In the m = 5 example, the diagram shows the two dihedral generators joined
       by a 5 edge. The isolated generator <var>u</var> reflects one hemisphere
       onto the other, with ten chambers on each side. <a href="?model=a1-i25">Try A₁ × I₂(5)</a>.
-      The m = 2 example has three isolated generators. <a href="?model=a1-cubed">Try A₁ × A₁ × A₁</a>.</p>
+      The m = 2 example has three isolated generators. <a href="?model=a1-cubed">Try A₁ × A₁ × A₁</a>.
+      At m = ∞, dihedral chambers become unit intervals on <Formula latex={mathNotes.affineProductSlice} />.
+      Taking their product with the positive and negative half-lines gives a tiling by half-strips.
+      {" "}<a href="?model=a1-i2-infinity">Try A₁ × I₂(∞)</a>.</p>
     <p><a href="https://personal.math.ubc.ca/~cass/coxeter/crm1.html">Casselman on rank two and rank three</a>
       {" · "}<a href="https://people.math.osu.edu/davis.12/old_papers/djs2.pdf">Davis, Januszkiewicz and Scott on triangle groups, §7.3</a></p>
     <h2>Coordinates and boundaries</h2>
@@ -481,7 +490,7 @@ function Notes({notesRef}) {
       The fundamental reflection acts by <Formula latex={mathNotes.reflection} />.</p>
     <p>For a finite rank-three example, normalize each positive ray using the dual metric <Formula latex={mathNotes.sphere} />.
       The resulting unit sphere is tiled by spherical triangles. The drawing shows one hemisphere.
-      For affine and hyperbolic examples, h is the positive unit eigenvector for the smallest eigenvalue of B.
+      For affine and hyperbolic triangle examples, h is the positive unit eigenvector for the smallest eigenvalue of B.
       The slice <Formula latex={mathNotes.slice} /> is Euclidean in affine type and gives the Klein disk in hyperbolic type.
       A hyperbolic boundary point belongs to the sliced cone exactly when it is an ideal vertex of a chamber.
       The dashed boundary indicates the circle or limiting rays. The gallery depth controls how many chambers are drawn.</p>

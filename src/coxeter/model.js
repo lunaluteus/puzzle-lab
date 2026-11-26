@@ -39,6 +39,13 @@ function spherical(id, title, [st, tu, us], order, max) {
     { depth: max, max });
 }
 
+export const affineDihedralProduct = model(
+  "a1-i2-infinity", "A₁ × I₂(∞) · (∞, 2, 2)", "Affine",
+  [[1, Infinity, 2], [Infinity, 1, 2], [2, 2, 1]],
+  "Unit-width half-strips tile the Euclidean slice. The isolated reflection u swaps the upper and lower halves.",
+  {depth: 4, max: 12}
+);
+
 export const presets = [
   model("a1", "A₁ · one mirror", "Finite line", [[1]],
     "The origin is the mirror. The two chambers cover the dual line.", {depth: 1, max: 1}),
@@ -68,6 +75,7 @@ export const presets = [
     "A right isosceles fundamental triangle tiles the Euclidean slice."),
   triangle("affine-g2", "G̃₂ · (2, 3, 6)", "Affine", [2, 3, 6],
     "A 30°–60°–90° fundamental triangle tiles the Euclidean slice."),
+  affineDihedralProduct,
   triangle("hurwitz", "Triangle · (2, 3, 7)", "Hyperbolic", [2, 3, 7],
     "A compact triangle with a small angle defect. The projective slice is the open Klein disk."),
   triangle("compact-245", "Triangle · (2, 4, 5)", "Hyperbolic", [2, 4, 5],
@@ -119,17 +127,24 @@ export const triangleSeries = [...presets, ...moreTriangleModels]
   .sort((a, b) => a.exponents[0][2] - b.exponents[0][2]);
 const productPresets = presets.filter(example =>
   example.rank === 3 && example.exponents[0][2] === 2 && example.exponents[1][2] === 2);
-export const dihedralProductModels = Array.from({length: maxDihedralOrder - 1}, (_, index) => {
+const finiteProducts = Array.from({length: maxDihedralOrder - 1}, (_, index) => {
   const m = index + 2;
   return productPresets.find(example => example.exponents[0][1] === m) ??
     spherical("a1-i2-" + m, "A₁ × I₂(" + m + ") · (" + m + ", 2, 2)", [m, 2, 2], 4 * m, m + 1);
 });
+export const dihedralProductModels = [...finiteProducts, affineDihedralProduct];
 export const examples = [...presets, ...moreDihedralModels,
   ...infiniteDihedralModels.filter(example => !infinitePresets.includes(example)), ...moreTriangleModels,
   ...dihedralProductModels.filter(example => !productPresets.includes(example))];
 export const dihedralModels = examples.filter(example => example.family === "Finite dihedral");
 export const exampleById = new Map(examples.map(example => [example.id, example]));
 export const wallNames = example => symbols.slice(0, example.rank);
+
+export function affineProductStrip({rays}) {
+  // On x_s + x_t = 1, the first two rays meet x_u = 0 and the third gives the unbounded direction.
+  const [first, second, vertical] = rays;
+  return {left: Math.min(first[0], second[0]), right: Math.max(first[0], second[0]), above: vertical[2] > 0};
+}
 
 export function reflect(point, wall, example) {
   const i = symbols.indexOf(wall);

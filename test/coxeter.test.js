@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { coxeterMath } from "../scripts/coxeter-mathjax.js";
 import {
-  braidMoves, buildGallery, dihedralMetric, dihedralModels, dihedralProductModels, exampleById, examples, limitRays, presets,
+  affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, dihedralMetric, dihedralModels,
+  dihedralProductModels, exampleById, examples, limitRays, presets,
   probeRankTwo, reflect, slice, sphere, triangleSeries, vertexAngles, wallNames
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
@@ -108,7 +109,7 @@ for (const model of examples) {
         }
       }
     });
-  } else if (model.rank === 3) {
+  } else if (model.rank === 3 && model !== affineDihedralProduct) {
     test(model.id + " projects to its expected Euclidean or hyperbolic slice", () => {
       const {height, project} = slice(model);
       assert.ok(height.every(x => x > 0));
@@ -296,8 +297,8 @@ test("the (2, 3, m) series crosses all three geometries with stable links", () =
 
 test("finite dihedral products have 4m chambers and preserve preset links", () => {
   assert.deepEqual(dihedralProductModels.map(model => model.exponents[0][1]),
-    Array.from({length: 23}, (_, index) => index + 2));
-  for (const model of dihedralProductModels) {
+    [...Array.from({length: 23}, (_, index) => index + 2), Infinity]);
+  for (const model of dihedralProductModels.slice(0, -1)) {
     const m = model.exponents[0][1];
     assert.deepEqual(model.exponents, [[1, m, 2], [m, 1, 2], [2, 2, 1]]);
     assert.equal(buildGallery(model).list.length, 4 * m);
@@ -307,6 +308,35 @@ test("finite dihedral products have 4m chambers and preserve preset links", () =
   assert.equal(dihedralProductModels[0].id, "a1-cubed");
   assert.equal(dihedralProductModels[3].id, "a1-i25");
   assert.equal(exampleFormulae(exampleById.get("a1-i2-24")).area, "\\frac{\\pi}{24}");
+});
+
+test("the affine dihedral product tiles its slice by unit half-strips", () => {
+  const {list, byWord, countsByLength} = buildGallery(affineDihedralProduct);
+  const strip = word => affineProductStrip(byWord.get(word));
+  assert.equal(exampleById.get("a1-i2-infinity"), affineDihedralProduct);
+  assert.deepEqual(strip(""), {left: 0, right: 1, above: true});
+  assert.deepEqual(strip("s"), {left: -1, right: 0, above: true});
+  assert.deepEqual(strip("t"), {left: 1, right: 2, above: true});
+  assert.deepEqual(strip("u"), {left: 0, right: 1, above: false});
+  assert.deepEqual(countsByLength, [1, 3, ...Array(affineDihedralProduct.max - 1).fill(4)]);
+  for (const chamber of list) {
+    const {left, right, above} = affineProductStrip(chamber);
+    assert.equal(right - left, 1);
+    for (const [s, t, u] of chamber.rays.slice(0, 2)) {
+      assert.equal(s + t, 1);
+      assert.equal(u, 0);
+    }
+    assert.deepEqual(chamber.rays[2], [0, 0, above ? 1 : -1]);
+    for (const [wall, neighbor] of Object.entries(chamber.neighbors)) {
+      const next = strip(neighbor);
+      if (wall === "u") assert.deepEqual(next, {left, right, above: !above});
+      else {
+        assert.equal(next.above, above);
+        assert.equal(Math.abs(next.left - left), 1);
+      }
+    }
+  }
+  assert.equal(exampleFormulae(affineDihedralProduct).angles, undefined);
 });
 
 test("matrix entries, eigenvalues and triangle angles stay exact in the inspector", () => {

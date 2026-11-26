@@ -1,4 +1,4 @@
-import { gcd, maxDihedralOrder, slice, wallNames } from "./model.js";
+import { affineDihedralProduct, gcd, maxDihedralOrder, slice, wallNames } from "./model.js";
 
 const tex = String.raw;
 const radicals = new Map([
@@ -55,6 +55,7 @@ export function exampleFormulae(example) {
   if (example.rank === 2) return { relations, matrix,
     eigenvalues: rankTwoEigenvalues(example),
     angle: example.family === "Finite dihedral" ? piFraction(1, example.exponents[0][1]) : null };
+  if (example === affineDihedralProduct) return { relations, matrix };
 
   const orders = [[1, 2], [2, 0], [0, 1]].map(([i, j]) => example.exponents[i][j]);
   const angles = tex`\left(${orders.map(m => m === Infinity ? "0" : piFraction(1, m)).join(", ")}\right)`;
@@ -79,6 +80,10 @@ export const mathNotes = {
   reciprocalInfinity: tex`1/\infty=0`,
   triangleSeries: tex`(2,3,m)`,
   product: tex`A_1\times I_2(m)`,
+  affineProductSlice: "x_s+x_t=1",
+  affineProductAxes: "(x_s,x_u)",
+  affineProductPositiveHeight: "x_s+x_t>0",
+  affineProductLine: "x_s=x_t=0",
   coordinate: tex`x_i=\lambda(\alpha_i)`,
   chamber: tex`C=\{x:x_i\ge 0\}`,
   cone: tex`\bigcup_{w\in W}wC`,
