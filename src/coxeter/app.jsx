@@ -324,8 +324,22 @@ function Inspector({model, coordinates}) {
   </section>;
 }
 
-function Notes() {
-  return <details>
+function Notes({notesRef}) {
+  useEffect(() => {
+    function followNotesLink() {
+      const hash = location.hash;
+      if (hash !== "#notes" && hash !== "#classification") return;
+      const notes = notesRef.current;
+      notes.open = true;
+      const target = hash === "#notes" ? notes : notes.querySelector("#classification");
+      target.scrollIntoView();
+    }
+    followNotesLink();
+    window.addEventListener("hashchange", followNotesLink);
+    return () => window.removeEventListener("hashchange", followNotesLink);
+  }, [notesRef]);
+
+  return <details id="notes" ref={notesRef}>
     <summary>Notes on Coxeter groups and the Tits cone</summary>
     <h2 id="classification">Classification through rank three</h2>
     <p>The rank is the number of simple reflections. The label on a pair gives the order
@@ -385,6 +399,7 @@ function Notes() {
 
 function App() {
   const [view, setView] = useState(initialView);
+  const notes = useRef(null);
   const model = exampleById.get(view.id);
   const graph = buildGallery(model);
   const chambers = useMemo(() => graph.list.filter(chamber => chamber.word.length <= view.depth),
@@ -417,7 +432,12 @@ function App() {
 
   return <main>
     <header>
-      <a href="index.html">Puzzle Lab</a>
+      <nav className="page-links" aria-label="Page links">
+        <a href="index.html">Puzzle Lab</a>
+        <a href="#notes" onClick={event => {
+          if (!(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) notes.current.open = true;
+        }}>Notes</a>
+      </nav>
       <h1>The Tits Cone</h1>
       <p>Reflect chambers on a line, in the dual plane, on the sphere of rays, and in Euclidean or hyperbolic slices.</p>
     </header>
@@ -431,7 +451,7 @@ function App() {
           projection: view.projection, coordinates: view.coordinates})} />
     </div>
     <Inspector model={model} coordinates={view.coordinates} />
-    <Notes />
+    <Notes notesRef={notes} />
   </main>;
 }
 
