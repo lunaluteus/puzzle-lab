@@ -81,17 +81,11 @@
     <button id="reset" type="button">重来</button>
   </div>
 </main>
-<script>
+<script id="triple-rotate-rules">
 "use strict";
 
-const $ = id => document.getElementById(id);
 const directions = { left: "向左", right: "向右" };
-const sizeControl = $("size");
-const tiles = $("tiles");
-const groups = $("groups");
 const solvers = new Map();
-let solver, board, initial, history, first, proposed, message;
-let tileElements, groupButtons;
 
 function rotate(state, i, direction) {
   const a = state[i], b = state[i + 1], c = state[i + 2];
@@ -122,6 +116,16 @@ function solverFor(size) {
   solvers.set(size, result);
   return result;
 }
+</script>
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const sizeControl = $("size");
+const tiles = $("tiles");
+const groups = $("groups");
+let solver, board, initial, history, first, proposed, message;
+let tileElements, groupButtons;
 
 function install(size) {
   solver = solverFor(size);
