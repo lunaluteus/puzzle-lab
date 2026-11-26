@@ -139,7 +139,18 @@ const signs = ["+", "−", "×", "÷"];
 const names = ["加", "减", "乘", "除"];
 const suits = ["♠", "♥", "♣", "♦"];
 const $ = id => document.getElementById(id);
+// Key each deck independently so two tabs can save different puzzles at once.
+const progressKeys = puzzles.map(deck => "puzzle-lab:fraction-24:solved:" + [...deck].sort((a, b) => a - b).join("-"));
 const solved = new Set();
+let progressStorage;
+try {
+  progressStorage = window.localStorage;
+  progressKeys.forEach((key, index) => {
+    if (progressStorage.getItem(key) === "1") solved.add(index);
+  });
+} catch {
+  // Progress remains available for the current page when storage is blocked.
+}
 const prompt = "选两张牌开始。减法和除法按选择顺序算。";
 let puzzleIndex = 0;
 let tiles, selection, history, steps, hintedOperator, message;
@@ -226,6 +237,12 @@ function apply(op) {
     message = expression + "。继续选牌。";
   } else if (isGoal(result)) {
     solved.add(puzzleIndex);
+    try {
+      progressStorage?.setItem(progressKeys[puzzleIndex], "1");
+    } catch {
+      // The completed puzzle still counts for the current page.
+    }
+    renderProgress();
     message = solved.size === puzzles.length ? "凑成 24！16 题全部过关。" : "凑成 24！过关。";
   } else {
     message = "最后得到 " + value(result) + "。可以撤销一步接着试。";
@@ -289,9 +306,16 @@ const operatorButtons = signs.map((sign, op) => {
   return button;
 });
 
+function renderProgress() {
+  $("progress").textContent = "已过 " + solved.size + " / " + puzzles.length + " 题";
+  for (const option of $("puzzle").options) {
+    const index = Number(option.value);
+    option.textContent = "第 " + (index + 1) + " 题" + (solved.has(index) ? "（已过关）" : "");
+  }
+}
+
 function render() {
   $("puzzle").value = String(puzzleIndex);
-  $("progress").textContent = "已过 " + solved.size + " / " + puzzles.length + " 题";
   $("status").textContent = message;
   $("hint").disabled = tiles.length < 2;
   $("undo").disabled = history.length === 0;
@@ -333,7 +357,6 @@ function render() {
 puzzles.forEach((_, index) => {
   const option = document.createElement("option");
   option.value = String(index);
-  option.textContent = "第 " + (index + 1) + " 题";
   $("puzzle").append(option);
 });
 $("puzzle").addEventListener("change", event => reset(Number(event.target.value)));
@@ -341,7 +364,19 @@ $("hint").addEventListener("click", hint);
 $("undo").addEventListener("click", undo);
 $("reset").addEventListener("click", () => reset(puzzleIndex));
 $("next").addEventListener("click", () => reset((puzzleIndex + 1) % puzzles.length));
+window.addEventListener("storage", event => {
+  if (!progressStorage || event.storageArea !== progressStorage) return;
+  if (event.key === null) solved.clear();
+  else {
+    const index = progressKeys.indexOf(event.key);
+    if (index === -1) return;
+    if (event.newValue === "1") solved.add(index);
+    else solved.delete(index);
+  }
+  renderProgress();
+});
 reset(0);
+renderProgress();
 </script>
 </body>
 </html>
