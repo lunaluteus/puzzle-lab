@@ -99,6 +99,22 @@ export function reflect(point, wall, example) {
   return point.map((x, j) => x - 2 * example.gram[i][j] * point[i]);
 }
 
+export function dihedralMetric(example) {
+  const offDiagonal = example.gram[0][1];
+  const diagonalScale = Math.sqrt(1 + offDiagonal);
+  const antiDiagonalScale = Math.sqrt(1 - offDiagonal);
+  // In the sum and difference directions, the dual metric has eigenvalues 1/(1 ± B_st).
+  const rescale = ([x, y], diagonal, antiDiagonal) => {
+    const sum = (x + y) * diagonal;
+    const difference = (x - y) * antiDiagonal;
+    return [(sum + difference) / 2, (sum - difference) / 2];
+  };
+  return {
+    forward: point => rescale(point, 1 / diagonalScale, 1 / antiDiagonalScale),
+    inverse: point => rescale(point, diagonalScale, antiDiagonalScale)
+  };
+}
+
 const galleryCache = new WeakMap();
 
 export function* braidMoves(word, example) {

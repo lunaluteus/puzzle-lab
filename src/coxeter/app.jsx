@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { braidMoves, buildGallery, dihedralModels, exampleById, limitRays, presets, probeRankTwo, sphere, wallNames } from "./model.js";
+import { braidMoves, buildGallery, dihedralMetric, dihedralModels, exampleById, limitRays, presets, probeRankTwo, sphere, wallNames } from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
 import { decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "./spherical.js";
@@ -24,10 +24,12 @@ function initialView() {
   const zoom = Number(query.get("zoom"));
   const camera = model.family === "Spherical" ? decodeSphereCamera(query.get("camera")) : null;
   const projection = model.family === "Hyperbolic" && query.get("projection") === "poincare" ? "poincare" : "klein";
-  return { id: model.id, word, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection };
+  const coordinates = model.family === "Finite dihedral" && query.get("coordinates") === "euclidean" ? "euclidean" : "dual";
+  return { id: model.id, word, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection, coordinates };
 }
 
-function PointProbe({model, point}) {
+function PointProbe({model, point, euclidean}) {
+  const displayedPoint = point && euclidean ? dihedralMetric(model).forward(point) : point;
   let description = "Click the plane to probe a point. The marker snaps to nearby visible walls and limit rays.";
   if (point) {
     const result = probeRankTwo(model, point);
@@ -43,28 +45,29 @@ function PointProbe({model, point}) {
     }
   }
   return <p className="point-probe" role="status">
-    {point && <b>({point.map(x => Number(x.toFixed(3))).join(", ")}) · </b>}{description}
+    {displayedPoint && <b>({displayedPoint.map(x => Number(x.toFixed(3))).join(", ")}) · </b>}{description}
   </p>;
 }
 
-function Plot({model, chambers, word, zoom, camera, projection, setCamera, choose, cross}) {
+function Plot({model, chambers, word, zoom, camera, projection, coordinates, setCamera, choose, cross}) {
   const canvas = useRef(null);
   const pick = useRef(null);
   const drag = useRef(null);
   const [point, setPoint] = useState(null);
   const [previewCamera, setPreviewCamera] = useState(null);
   const spherical = model.family === "Spherical";
+  const euclidean = model.family === "Finite dihedral" && coordinates === "euclidean";
   const plotCamera = previewCamera ?? camera;
 
   useLayoutEffect(() => {
     const redraw = () => {
-      pick.current = drawPlot(canvas.current, model, chambers, word, zoom, point, plotCamera, projection);
+      pick.current = drawPlot(canvas.current, model, chambers, word, {zoom, point, camera: plotCamera, projection, coordinates});
     };
     redraw();
     const observer = new ResizeObserver(redraw);
     observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [model, chambers, word, zoom, point, plotCamera, projection]);
+  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates]);
 
   const centeredCamera = () => sphereCamera(chambers.find(chamber => chamber.word === word).rays.map(sphere(model)));
 
@@ -138,7 +141,7 @@ function Plot({model, chambers, word, zoom, camera, projection, setCamera, choos
         <button type="button" disabled={!camera} onClick={() => setCamera(null)}>Center on selection</button>
       </span>}
     </figcaption>
-    {model.rank === 2 && <PointProbe model={model} point={point} />}
+    {model.rank === 2 && <PointProbe model={model} point={point} euclidean={euclidean} />}
   </figure>;
 }
 
@@ -203,6 +206,11 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         <label className="depth-label" htmlFor="dihedral-order">Order of st</label>
         <select id="dihedral-order" value={model.id} onChange={event => changeModel(event.target.value)}>
           {dihedralModels.map(example => <option key={example.id} value={example.id}>{example.exponents[0][1]}</option>)}
+        </select>
+        <label className="depth-label" htmlFor="coordinates">Coordinates</label>
+        <select id="coordinates" value={view.coordinates} onChange={event => update({coordinates: event.target.value})}>
+          <option value="dual">Simple-root dual</option>
+          <option value="euclidean">Invariant Euclidean</option>
         </select>
       </>}
       <label className="depth-label" htmlFor="depth">
@@ -280,7 +288,7 @@ function Formula({latex, label}) {
     dangerouslySetInnerHTML={{__html: maths.formulas[latex]}} />;
 }
 
-function Inspector({model}) {
+function Inspector({model, coordinates}) {
   const {relations, matrix, angles, area, covector, angle} = exampleFormulae(model);
   const spherical = model.family === "Spherical";
   const signature = {"Finite line": "Positive definite", "Finite dihedral": "Positive definite", Spherical: "Positive definite",
@@ -306,7 +314,9 @@ function Inspector({model}) {
         {spherical && <p>Area on the unit sphere <Formula latex={area} /> sr.</p>}
         {covector && <p>Slice <Formula latex={mathNotes.slice} /> with <Formula latex={covector} />.</p>}
       </> : <>
-        <p>Axes show <Formula latex={mathNotes.axes} /> in simple-root dual coordinates.</p>
+        {angle && coordinates === "euclidean"
+          ? <p>The axes are orthonormal for the dual metric <Formula latex={mathNotes.sphere} />.</p>
+          : <p>Axes show <Formula latex={mathNotes.axes} /> in simple-root dual coordinates.</p>}
         {angle ? <p>Mirror angle <Formula latex={angle} /> in the invariant Euclidean metric.</p>
           : <p>Limit rays <Formula latex={mathNotes.limit} />.</p>}
       </>}
@@ -325,6 +335,7 @@ function Notes() {
       Its chambers are the two closed half-lines. <a href="?model=a1">Try A₁</a>.</p>
     <p><strong>Rank two.</strong> The single label determines the dihedral system <Formula latex={mathNotes.dihedral} />.
       The order selector lets you explore <Formula latex={mathNotes.dihedralOrders} />.
+      Choose invariant Euclidean coordinates to see the chambers as sectors of equal angle.
       With <Formula latex={mathNotes.infiniteDihedral} />, the presets use the same infinite dihedral group
       with different Gram entries <Formula latex={mathNotes.dihedralCoupling} />.
       At c = 1, the Tits cone is an open half-plane together with the origin.
@@ -399,6 +410,8 @@ function App() {
     else url.searchParams.delete("camera");
     if (model.family === "Hyperbolic" && view.projection === "poincare") url.searchParams.set("projection", "poincare");
     else url.searchParams.delete("projection");
+    if (model.family === "Finite dihedral" && view.coordinates === "euclidean") url.searchParams.set("coordinates", "euclidean");
+    else url.searchParams.delete("coordinates");
     if (url.href !== location.href) history.replaceState(null, "", url);
   }, [view, model]);
 
@@ -410,14 +423,14 @@ function App() {
     </header>
     <div className="viewer">
       <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
-        camera={view.camera} projection={view.projection} setCamera={camera => update({camera})}
+        camera={view.camera} projection={view.projection} coordinates={view.coordinates} setCamera={camera => update({camera})}
         choose={choose} cross={wall => choose(neighbors[wall])} />
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
         update={update} choose={choose}
         changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null,
-          projection: view.projection})} />
+          projection: view.projection, coordinates: view.coordinates})} />
     </div>
-    <Inspector model={model} />
+    <Inspector model={model} coordinates={view.coordinates} />
     <Notes />
   </main>;
 }

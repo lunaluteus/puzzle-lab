@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { braidMoves, buildGallery, exampleById, examples, limitRays, probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
+import { braidMoves, buildGallery, dihedralMetric, dihedralModels, exampleById, examples, limitRays, probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
 import { exampleFormulae, gramEntry } from "../src/coxeter/formulas.js";
@@ -136,6 +136,21 @@ for (const model of examples) {
     });
   }
 }
+
+test("finite dihedral chambers have equal angles in invariant Euclidean coordinates", () => {
+  for (const model of dihedralModels) {
+    const metric = dihedralMetric(model);
+    const angle = Math.PI / model.exponents[0][1];
+    for (const {rays} of buildGallery(model).list) {
+      const [a, b] = rays.map(metric.forward);
+      const sweep = Math.atan2(Math.abs(a[0] * b[1] - a[1] * b[0]), a[0] * b[0] + a[1] * b[1]);
+      assert.ok(close(sweep, angle));
+      for (const [original, shown] of [[rays[0], a], [rays[1], b]]) {
+        assert.ok(metric.inverse(shown).every((value, i) => close(value, original[i])));
+      }
+    }
+  }
+});
 
 test("affine A2 and the ideal triangle have the expected growth", () => {
   const affine = buildGallery(exampleById.get("affine2")).countsByLength;

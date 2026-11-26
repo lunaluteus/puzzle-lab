@@ -1,4 +1,4 @@
-import { limitRays, slice, symbols } from "./model.js";
+import { dihedralMetric, limitRays, slice, symbols } from "./model.js";
 import { drawSphere } from "./spherical.js";
 
 const tau = 2 * Math.PI;
@@ -60,7 +60,9 @@ export function poincareCircle([ax, ay], [bx, by]) {
     radius: Math.sqrt(Math.max(0, 1 - distance*distance)) / Math.abs(distance)};
 }
 
-export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, camera = null, projection = "klein") {
+export function drawPlot(plot, model, chambers, word, {
+  zoom = 1, point = null, camera = null, projection = "klein", coordinates = "dual"
+} = {}) {
   const ctx = plot.getContext("2d");
   const {width, height} = plot.getBoundingClientRect();
   if (width === 0 || height === 0) return () => null;
@@ -78,6 +80,8 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
   }
   const project = model.rank === 3 ? slice(model).project : null;
   const poincare = model.family === "Hyperbolic" && projection === "poincare";
+  const metric = model.family === "Finite dihedral" && coordinates === "euclidean" ? dihedralMetric(model) : null;
+  const fans = metric ? chambers.map(chamber => ({...chamber, rays: chamber.rays.map(metric.forward)})) : chambers;
   const limit = limitRays(model);
   function pathFan(start, sweep) {
     ctx.beginPath();
@@ -168,8 +172,8 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
 
   function paintFans() {
     const limits = planarFrame();
-    chambers.filter(chamber => chamber.word !== word).forEach(paintFan);
-    paintFan(chambers.find(chamber => chamber.word === word));
+    fans.filter(chamber => chamber.word !== word).forEach(paintFan);
+    paintFan(fans.find(chamber => chamber.word === word));
     ctx.setLineDash([4, 6]);
     line([0, view.y], [view.width, view.y], palette.axis, .8);
     line([view.x, 0], [view.x, view.height], palette.axis, .8);
@@ -177,7 +181,7 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
       for (const angle of limits) line([view.x, view.y], rayEnd(angle, view.far), palette.limit, 1.4);
     }
     ctx.setLineDash([]);
-    const current = chambers.find(chamber => chamber.word === word);
+    const current = fans.find(chamber => chamber.word === word);
     current.rays.forEach((ray, i) => {
       const angle = Math.atan2(-ray[1], ray[0]);
       const [x, y] = rayEnd(angle, view.radius * .57);
@@ -191,15 +195,15 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
     ctx.arc(view.x, view.y, 3, 0, tau);
     ctx.fillStyle = palette.label;
     ctx.fill();
-    text("xₛ", view.width - 16, view.y - 13, palette.label);
-    text("xₜ", view.x + 13, 16, palette.label);
+    text(metric ? "X" : "xₛ", view.width - 16, view.y - 13, palette.label);
+    text(metric ? "Y" : "xₜ", view.x + 13, 16, palette.label);
   }
 
   function pickFan(x, y) {
     if (Math.hypot(x, y) < 3) return {point: [0, 0], word: null};
     let point = [x / view.radius, -y / view.radius];
     let snapDistance = 1.5;
-    for (const [u, v] of [...chambers.flatMap(chamber => chamber.rays), ...(limit ?? [])]) {
+    for (const [u, v] of [...fans.flatMap(chamber => chamber.rays), ...(limit ?? [])]) {
       const norm = Math.hypot(u, v);
       const a = u / norm, b = v / norm;
       const along = a * x - b * y;
@@ -209,12 +213,12 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
       point = [a * along / view.radius, b * along / view.radius];
     }
     const angle = Math.atan2(-point[1], point[0]);
-    const chamber = chambers.find(chamber => {
+    const chamber = fans.find(chamber => {
       const {start, sweep} = fanAngles(chamber.rays);
       const offset = wrap(angle - start);
       return offset <= sweep + 1e-12 || tau - offset <= 1e-12;
     });
-    return {point, word: chamber?.word ?? null};
+    return {point: metric ? metric.inverse(point) : point, word: chamber?.word ?? null};
   }
 
   function scale([x, y]) {
@@ -311,7 +315,8 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
   if (model.rank === 2) {
     paintFans();
     if (point) {
-      const x = view.x + view.radius * point[0], y = view.y - view.radius * point[1];
+      const [px, py] = metric ? metric.forward(point) : point;
+      const x = view.x + view.radius * px, y = view.y - view.radius * py;
       ctx.beginPath();
       ctx.arc(x, y, 5, 0, tau);
       ctx.fillStyle = "#fff6dd";
