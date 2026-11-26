@@ -108,8 +108,17 @@ export const infiniteDihedralModels = Array.from({length: 21}, (_, index) => {
   return infinite("i2-infinity-" + coupling.join("-"), "I₂(∞) · c = " + couplingLabel(coupling), coupling,
     "The Tits cone is an open wedge together with the origin. The limit rays are excluded.");
 });
+export const maxTriangleOrder = 24;
+const moreTriangleModels = Array.from({length: maxTriangleOrder - 7}, (_, index) => {
+  const m = index + 8;
+  return triangle("triangle-23-" + m, "Triangle · (2, 3, " + m + ")", "Hyperbolic", [2, 3, m],
+    "A compact right triangle. Its smallest angle is π/" + m + ".");
+});
+export const triangleSeries = [...presets, ...moreTriangleModels]
+  .filter(example => example.rank === 3 && example.exponents[0][1] === 2 && example.exponents[1][2] === 3)
+  .sort((a, b) => a.exponents[0][2] - b.exponents[0][2]);
 export const examples = [...presets, ...moreDihedralModels,
-  ...infiniteDihedralModels.filter(example => !infinitePresets.includes(example))];
+  ...infiniteDihedralModels.filter(example => !infinitePresets.includes(example)), ...moreTriangleModels];
 export const dihedralModels = examples.filter(example => example.family === "Finite dihedral");
 export const exampleById = new Map(examples.map(example => [example.id, example]));
 export const wallNames = example => symbols.slice(0, example.rank);

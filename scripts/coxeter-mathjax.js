@@ -6,11 +6,13 @@ import { SVG } from "@mathjax/src/js/output/svg.js";
 import "@mathjax/src/js/input/tex/base/BaseConfiguration.js";
 import "@mathjax/src/js/input/tex/ams/AmsConfiguration.js";
 import "@mathjax/src/js/util/asyncLoad/esm.js";
-import { examples, presets } from "../src/coxeter/model.js";
+import { examples, presets, triangleSeries } from "../src/coxeter/model.js";
 import { exampleFormulae, mathNotes } from "../src/coxeter/formulas.js";
 
 const virtualId = "virtual:coxeter-math";
 const supplementalId = "virtual:coxeter-extra-math";
+const triangleId = "virtual:coxeter-triangle-math";
+const moduleIds = new Set([virtualId, supplementalId, triangleId]);
 
 async function typeset() {
   const adapter = liteAdaptor({fontSize: 16});
@@ -23,16 +25,21 @@ async function typeset() {
     });
     const collect = models => models.flatMap(example => Object.values(exampleFormulae(example)).filter(Boolean));
     const initial = new Set([...Object.values(mathNotes), ...collect(presets)]);
-    const formulas = new Set([...initial, ...collect(examples)]);
-    const standard = {}, supplemental = {};
+    const deferred = new Set(collect(examples.filter(example => !triangleSeries.includes(example))));
+    const formulas = new Set([...initial, ...deferred, ...collect(triangleSeries)]);
+    const standard = {}, supplemental = {}, triangles = {};
     for (const tex of formulas) {
       const node = await document.convertPromise(tex, {display: false, em: 16, ex: 8});
-      const target = initial.has(tex) ? standard : supplemental;
+      const target = initial.has(tex) ? standard : deferred.has(tex) ? supplemental : triangles;
       target[tex] = adapter.outerHTML(node);
     }
-    // Both modules reference the glyph cache included with the initial formulas.
+    // Both deferred modules reference the glyph cache with the initial formulas.
     const glyphs = adapter.outerHTML(output.pageElements(document));
-    return {standard: {formulas: standard, glyphs}, supplemental};
+    return {
+      [virtualId]: {formulas: standard, glyphs, triangleFormulaKeys: Object.keys(triangles)},
+      [supplementalId]: supplemental,
+      [triangleId]: triangles
+    };
   } finally {
     mathjax.handlers.unregister(handler);
   }
@@ -43,13 +50,12 @@ export function coxeterMath() {
   return {
     name: "coxeter-mathjax",
     resolveId(id) {
-      return id === virtualId || id === supplementalId ? "\0" + id : null;
+      return moduleIds.has(id) ? "\0" + id : null;
     },
     async load(id) {
-      const main = id === "\0" + virtualId;
-      if (!main && id !== "\0" + supplementalId) return null;
-      const {standard, supplemental} = await (compilation ??= typeset());
-      return "export default " + JSON.stringify(main ? standard : supplemental);
+      if (!id?.startsWith("\0") || !moduleIds.has(id.slice(1))) return null;
+      const modules = await (compilation ??= typeset());
+      return "export default " + JSON.stringify(modules[id.slice(1)]);
     }
   };
 }

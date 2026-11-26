@@ -76,6 +76,7 @@ export const mathNotes = {
   triangleOrders: tex`(p,q,r)=(m_{st},m_{tu},m_{us})`,
   reciprocalSum: tex`\frac{1}{p}+\frac{1}{q}+\frac{1}{r}`,
   reciprocalInfinity: tex`1/\infty=0`,
+  triangleSeries: tex`(2,3,m)`,
   product: tex`A_1\times I_2(m)`,
   coordinate: tex`x_i=\lambda(\alpha_i)`,
   chamber: tex`C=\{x:x_i\ge 0\}`,

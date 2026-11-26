@@ -3,7 +3,7 @@ import test from "node:test";
 import { coxeterMath } from "../scripts/coxeter-mathjax.js";
 import {
   braidMoves, buildGallery, dihedralMetric, dihedralModels, exampleById, examples, limitRays, presets,
-  probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames
+  probeRankTwo, reflect, slice, sphere, triangleSeries, vertexAngles, wallNames
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
@@ -280,6 +280,20 @@ test("rank-two probes get the distance from chamber interiors and distinguish li
   }
 });
 
+test("the (2, 3, m) series crosses all three geometries with stable links", () => {
+  const orders = triangleSeries.map(model => model.exponents[0][2]);
+  assert.deepEqual(orders, [...Array.from({length: 22}, (_, i) => i + 3), Infinity]);
+  for (const model of triangleSeries) {
+    const m = model.exponents[0][2];
+    assert.equal(model.exponents[0][1], 2);
+    assert.equal(model.exponents[1][2], 3);
+    assert.equal(model.family, m < 6 ? "Spherical" : m === 6 ? "Affine" : "Hyperbolic");
+    assert.equal(exampleById.get(model.id), model);
+  }
+  assert.deepEqual(triangleSeries.slice(0, 5).map(model => model.id), ["a3", "b3", "h3", "affine-g2", "hurwitz"]);
+  assert.equal(triangleSeries.at(-1).id, "one-cusp");
+});
+
 test("matrix entries, eigenvalues and angle deficits stay exact in the inspector", () => {
   const entry = id => gramEntry(exampleById.get(id), 0, 1);
   assert.equal(entry("a2"), "-\\frac{1}{2}");
@@ -294,6 +308,7 @@ test("matrix entries, eigenvalues and angle deficits stay exact in the inspector
   assert.equal(eigenvalues("i2-infinity-5-4"), "\\lambda_+=\\frac{9}{4},\\quad \\lambda_-=-\\frac{1}{4}");
   assert.equal(eigenvalues("i2-24"), "\\lambda_{\\pm}=1\\pm\\cos\\!\\left(\\frac{\\pi}{24}\\right)");
   assert.equal(exampleFormulae(exampleById.get("hurwitz")).area, "\\frac{\\pi}{42}");
+  assert.equal(exampleFormulae(exampleById.get("triangle-23-24")).area, "\\frac{\\pi}{8}");
   assert.equal(exampleFormulae(exampleById.get("h3")).area, "\\frac{\\pi}{30}");
   for (const example of examples) {
     const {matrix} = exampleFormulae(example);
@@ -311,23 +326,28 @@ test("the MathJax modules contain every formula and resolve their shared glyphs"
     assert.ok(source?.startsWith(prefix), specifier);
     return JSON.parse(source.slice(prefix.length));
   };
-  const [{formulas, glyphs}, supplemental] = await Promise.all([
+  const [{formulas, glyphs, triangleFormulaKeys}, supplemental, triangles] = await Promise.all([
     readModule("virtual:coxeter-math"),
-    readModule("virtual:coxeter-extra-math")
+    readModule("virtual:coxeter-extra-math"),
+    readModule("virtual:coxeter-triangle-math")
   ]);
 
   const collect = models => models.flatMap(model => Object.values(exampleFormulae(model)).filter(Boolean));
   const initial = new Set([...Object.values(mathNotes), ...collect(presets)]);
-  const deferred = new Set(collect(examples).filter(tex => !initial.has(tex)));
+  const deferred = new Set(collect(examples.filter(model => !triangleSeries.includes(model))).filter(tex => !initial.has(tex)));
+  const triangle = new Set(collect(triangleSeries).filter(tex => !initial.has(tex) && !deferred.has(tex)));
   assert.ok(deferred.size > 0);
+  assert.ok(triangle.size > 0);
   assert.deepEqual(new Set(Object.keys(formulas)), initial);
   assert.deepEqual(new Set(Object.keys(supplemental)), deferred);
+  assert.deepEqual(new Set(Object.keys(triangles)), triangle);
+  assert.deepEqual(new Set(triangleFormulaKeys), triangle);
 
   const glyphIds = Array.from(glyphs.matchAll(/\bid="([^"]+)"/g), match => match[1]);
   const glyphCache = new Set(glyphIds);
   assert.equal(glyphCache.size, glyphIds.length);
   assert.ok(glyphCache.size > 0);
-  for (const [tex, html] of Object.entries({...formulas, ...supplemental})) {
+  for (const [tex, html] of Object.entries({...formulas, ...supplemental, ...triangles})) {
     assert.match(html, /<svg\b/, tex);
     for (const [, reference] of html.matchAll(/<use\b[^>]*\bhref="#([^"]+)"/g)) {
       assert.ok(glyphCache.has(reference), tex + " references missing glyph " + reference);

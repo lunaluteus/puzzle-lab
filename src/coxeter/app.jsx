@@ -2,7 +2,7 @@ import React, { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useS
 import { createRoot } from "react-dom/client";
 import {
   braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels, exampleById, infiniteDihedralModels,
-  limitRays, presets, probeRankTwo, sphere, wallNames
+  limitRays, maxTriangleOrder, presets, probeRankTwo, sphere, triangleSeries, wallNames
 } from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
@@ -258,6 +258,14 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
           </option>)}
         </select>
       </>}
+      {triangleSeries.includes(model) && <>
+        <label className="depth-label" htmlFor="triangle-order">Order m in (2, 3, m)</label>
+        <select id="triangle-order" value={model.id} onChange={event => changeModel(event.target.value)}>
+          {triangleSeries.map(example => <option key={example.id} value={example.id}>
+            {orderLabel(example.exponents[0][2])}
+          </option>)}
+        </select>
+      </>}
       <label className="depth-label" htmlFor="depth">
         Gallery depth <output id="depth-value">{view.depth}</output>
       </label>
@@ -333,10 +341,13 @@ function FormulaMarkup({latex, label, html}) {
     dangerouslySetInnerHTML={html ? {__html: html} : undefined}>{html ? null : latex}</span>;
 }
 
-let supplementalFormulas;
+const triangleFormulaKeys = new Set(maths.triangleFormulaKeys);
+let supplementalFormulas, triangleFormulas;
 function SupplementalFormula(props) {
-  supplementalFormulas ??= import("virtual:coxeter-extra-math").then(module => module.default, () => ({}));
-  const formulas = use(supplementalFormulas);
+  const loading = triangleFormulaKeys.has(props.latex)
+    ? (triangleFormulas ??= import("virtual:coxeter-triangle-math").then(module => module.default, () => ({})))
+    : (supplementalFormulas ??= import("virtual:coxeter-extra-math").then(module => module.default, () => ({})));
+  const formulas = use(loading);
   return <FormulaMarkup {...props} html={formulas[props.latex]} />;
 }
 
@@ -434,6 +445,9 @@ function Notes({notesRef}) {
         triangles and triangles with ideal vertices. An ∞ label gives an ideal vertex with angle zero.
         {" "}<a href="?model=one-cusp">Try (2, 3, ∞)</a>.</li>
     </ul>
+    <p>The <Formula latex={mathNotes.triangleSeries} /> series passes from spherical to Euclidean at m = 6
+      and to hyperbolic at m = 7. The order selector runs from 3 through {maxTriangleOrder}, with ∞ for the ideal corner.
+      {" "}<a href="?model=b3">Start at m = 4 and change the third order</a>.</p>
     <p>Disconnected diagrams give direct products. The rank-three products have the form
       <Formula latex={mathNotes.product} />, where m can also be infinite.
       In the m = 5 example, the diagram shows the two dihedral generators joined
