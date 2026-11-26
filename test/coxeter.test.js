@@ -280,7 +280,7 @@ test("rank-two probes get the distance from chamber interiors and distinguish li
   }
 });
 
-test("matrix entries and angle deficits stay exact in the inspector", () => {
+test("matrix entries, eigenvalues and angle deficits stay exact in the inspector", () => {
   const entry = id => gramEntry(exampleById.get(id), 0, 1);
   assert.equal(entry("a2"), "-\\frac{1}{2}");
   assert.equal(entry("b2"), "-\\frac{\\sqrt{2}}{2}");
@@ -288,6 +288,11 @@ test("matrix entries and angle deficits stay exact in the inspector", () => {
   assert.equal(entry("indefinite"), "-\\frac{27}{20}");
   assert.equal(entry("near-affine"), "-\\frac{21}{20}");
   assert.equal(entry("affine"), "-1");
+  const eigenvalues = id => exampleFormulae(exampleById.get(id)).eigenvalues;
+  assert.equal(eigenvalues("orthogonal"), "\\lambda_+=\\lambda_-=1");
+  assert.equal(eigenvalues("affine"), "\\lambda_+=2,\\quad \\lambda_-=0");
+  assert.equal(eigenvalues("i2-infinity-5-4"), "\\lambda_+=\\frac{9}{4},\\quad \\lambda_-=-\\frac{1}{4}");
+  assert.equal(eigenvalues("i2-24"), "\\lambda_{\\pm}=1\\pm\\cos\\!\\left(\\frac{\\pi}{24}\\right)");
   assert.equal(exampleFormulae(exampleById.get("hurwitz")).area, "\\frac{\\pi}{42}");
   assert.equal(exampleFormulae(exampleById.get("h3")).area, "\\frac{\\pi}{30}");
   for (const example of examples) {

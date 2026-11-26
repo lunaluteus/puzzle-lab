@@ -9,11 +9,18 @@ const radicals = new Map([
   [6, tex`-\frac{\sqrt{3}}{2}`]
 ]);
 
+function rational(numerator, denominator) {
+  const divisor = gcd(Math.abs(numerator), denominator);
+  const n = numerator / divisor, d = denominator / divisor;
+  if (d === 1) return String(n);
+  return (n < 0 ? "-" : "") + tex`\frac{${Math.abs(n)}}{${d}}`;
+}
+
 export function gramEntry(example, i, j) {
   if (i === j) return "1";
   if (example.coupling) {
     const [numerator, denominator] = example.coupling;
-    return denominator === 1 ? "-" + numerator : tex`-\frac{${numerator}}{${denominator}}`;
+    return rational(-numerator, denominator);
   }
   const m = example.exponents[i][j];
   if (m === Infinity) return "-1";
@@ -27,6 +34,16 @@ function piFraction(n, d) {
   return d === g ? numerator : tex`\frac{${numerator}}{${d / g}}`;
 }
 
+function rankTwoEigenvalues(example) {
+  if (example.coupling) {
+    const [n, d] = example.coupling;
+    return tex`\lambda_+=${rational(d + n, d)},\quad \lambda_-=${rational(d - n, d)}`;
+  }
+  const m = example.exponents[0][1];
+  if (m === 2) return tex`\lambda_+=\lambda_-=1`;
+  return tex`\lambda_{\pm}=1\pm\cos\!\left(\frac{\pi}{${m}}\right)`;
+}
+
 export function exampleFormulae(example) {
   const walls = wallNames(example);
   const order = m => m === Infinity ? tex`\infty` : String(m);
@@ -36,6 +53,7 @@ export function exampleFormulae(example) {
   const matrix = tex`B=\begin{pmatrix}${rows.join(tex`\\`)}\end{pmatrix}`;
   if (example.rank === 1) return { relations: "s^2=1", matrix };
   if (example.rank === 2) return { relations, matrix,
+    eigenvalues: rankTwoEigenvalues(example),
     angle: example.family === "Finite dihedral" ? piFraction(1, example.exponents[0][1]) : null };
 
   const orders = [[1, 2], [2, 0], [0, 1]].map(([i, j]) => example.exponents[i][j]);
@@ -54,6 +72,7 @@ export const mathNotes = {
   dihedralOrders: tex`m=2,\ldots,${maxDihedralOrder}`,
   infiniteDihedral: tex`m=\infty`,
   dihedralCoupling: tex`B_{st}=-c,\quad c\ge 1`,
+  couplingEigenvalues: tex`1+c,\quad 1-c`,
   triangleOrders: tex`(p,q,r)=(m_{st},m_{tu},m_{us})`,
   reciprocalSum: tex`\frac{1}{p}+\frac{1}{q}+\frac{1}{r}`,
   reciprocalInfinity: tex`1/\infty=0`,

@@ -349,7 +349,7 @@ function Formula(props) {
 }
 
 function Inspector({model, coordinates}) {
-  const {relations, matrix, angles, area, covector, angle} = exampleFormulae(model);
+  const {relations, matrix, eigenvalues, angles, area, covector, angle} = exampleFormulae(model);
   const spherical = model.family === "Spherical";
   const signature = {"Finite line": "Positive definite", "Finite dihedral": "Positive definite", Spherical: "Positive definite",
     Affine: "Positive semidefinite", Indefinite: "Signature (1, 1)", Hyperbolic: "Signature (2, 1)"};
@@ -363,6 +363,7 @@ function Inspector({model, coordinates}) {
       <h2>Gram matrix</h2>
       <div className="matrix"><Formula latex={matrix} label="Exact Gram matrix" /></div>
       <p>{signature[model.family]}. Generator order {wallNames(model).join(", ")}.</p>
+      {eigenvalues && <p>Eigenvalues <Formula latex={eigenvalues} label="Gram eigenvalues" />.</p>}
     </div>
     <div className="panel data">
       <h2>{spherical ? "Sphere of rays" : angles ? "Projective slice" : model.rank === 1 ? "The dual line" : "The dual plane"}</h2>
@@ -412,6 +413,7 @@ function Notes({notesRef}) {
       Choose invariant Euclidean coordinates to see the chambers as sectors of equal angle.
       With <Formula latex={mathNotes.infiniteDihedral} />, the same infinite dihedral group has realizations
       with different Gram entries <Formula latex={mathNotes.dihedralCoupling} />.
+      The Gram eigenvalues are <Formula latex={mathNotes.couplingEigenvalues} />. One vanishes at c = 1.
       The coupling selector varies c from 1 to 2 in steps of 1/20. A probed point stays fixed in dual coordinates as c changes.
       At c = 1, the Tits cone is an open half-plane together with the origin.
       At c &gt; 1, it is an open wedge together with the origin, and its opening angle depends on c.</p>
