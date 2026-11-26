@@ -299,6 +299,7 @@ function GalleryGrowth({counts, depth, changeDepth}) {
       </label>)}
     </div>
     <div className="growth-axis" aria-hidden="true"><span>0</span><span>Word length</span><span>{counts.length - 1}</span></div>
+    <p><a href="#growth">Compare growth across examples</a></p>
   </details>;
 }
 
@@ -508,10 +509,10 @@ function Notes({notesRef}) {
   useEffect(() => {
     function followNotesLink() {
       const hash = location.hash;
-      if (hash !== "#notes" && hash !== "#classification") return;
+      if (!["#notes", "#classification", "#growth"].includes(hash)) return;
       const notes = notesRef.current;
       notes.open = true;
-      const target = hash === "#notes" ? notes : notes.querySelector("#classification");
+      const target = hash === "#notes" ? notes : notes.querySelector(hash);
       target.scrollIntoView();
     }
     followNotesLink();
@@ -578,6 +579,23 @@ function Notes({notesRef}) {
       {" "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare the su and us routes</a>.</p>
     <p><a href="https://personal.math.ubc.ca/~cass/coxeter/crm1.html">Casselman on rank two and rank three</a>
       {" · "}<a href="https://people.math.osu.edu/davis.12/old_papers/djs2.pdf">Davis, Januszkiewicz and Scott on triangle groups, §7.3</a></p>
+    <h2 id="growth">How the gallery grows</h2>
+    <p>A chamber at length <var>n</var> takes <var>n</var> wall crossings to reach by a shortest gallery.
+      Let <var>a</var><sub>n</sub> count those chambers. Each chart starts with the single chamber <var>C</var> at length zero.
+      At depth <var>d</var>, the gallery contains <Formula latex={mathNotes.growthTotal} /> chambers.</p>
+    <ul>
+      <li><a href="?model=a1-i2-infinity&amp;depth=6">Affine half-strips</a> have <Formula latex={mathNotes.growthProduct} />.
+        For length two or more, choose one of the two alternating dihedral words of length <var>n</var>,
+        or use length <var>n</var> − 1 and include the commuting reflection <var>u</var>.</li>
+      <li><a href="?model=affine2&amp;depth=6">Affine Ã₂</a> has <Formula latex={mathNotes.growthAffine} />.
+        These are the positive-degree coefficients of <Formula latex={mathNotes.growthAffineSeries} />.
+        {" "}<a href="https://sites.math.washington.edu/~billey/classes/reflection.groups/references/EntireBook.pdf">Björner and Brenti, §7.1</a>.</li>
+      <li><a href="?model=ideal&amp;depth=6">The ideal triangle</a> has <Formula latex={mathNotes.growthIdeal} />.
+        There are three choices for the first reflection and two at each later step, since only adjacent equal
+        letters cancel. The reduced word is unique.</li>
+    </ul>
+    <p>At depth six, these galleries contain 24, 64, and 190 chambers, respectively. In the ideal example,
+      turn on <strong>Log scale</strong> to see the earliest layers alongside the later ones.</p>
     <h2>Coordinates and boundaries</h2>
     <p>Write <Formula latex={mathNotes.coordinate} /> in the dual of the simple-root space.
       The fundamental chamber is <Formula latex={mathNotes.chamber} />, and the Tits cone is <Formula latex={mathNotes.cone} />.
