@@ -16,6 +16,13 @@ const rotationKeys = new Map([
   ["ArrowLeft", [-.16, 0]], ["ArrowRight", [.16, 0]], ["ArrowUp", [0, -.16]], ["ArrowDown", [0, .16]]
 ]);
 
+function decodePoint(value) {
+  const coordinates = value?.split(",");
+  if (coordinates?.length !== 2) return null;
+  const point = coordinates.map(part => part.trim() ? Number(part) : NaN);
+  return point.every(coordinate => Math.abs(coordinate) <= Number.MAX_SAFE_INTEGER) ? point : null;
+}
+
 function initialView() {
   const query = new URLSearchParams(location.search);
   const model = exampleById.get(query.get("model")) ?? exampleById.get(defaultId);
@@ -31,7 +38,8 @@ function initialView() {
   const camera = model.family === "Spherical" ? decodeSphereCamera(query.get("camera")) : null;
   const projection = model.family === "Hyperbolic" && query.get("projection") === "poincare" ? "poincare" : "klein";
   const coordinates = model.family === "Finite dihedral" && query.get("coordinates") === "euclidean" ? "euclidean" : "dual";
-  return { id: model.id, word, destination, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection, coordinates };
+  const point = model.rank === 2 ? decodePoint(query.get("point")) : null;
+  return { id: model.id, word, destination, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection, coordinates, point };
 }
 
 function PointProbe({model, point, euclidean}) {
@@ -55,11 +63,10 @@ function PointProbe({model, point, euclidean}) {
   </p>;
 }
 
-function Plot({model, chambers, word, zoom, camera, projection, coordinates, setCamera, choose, cross}) {
+function Plot({model, chambers, word, zoom, camera, projection, coordinates, point, setPoint, setCamera, choose, cross}) {
   const canvas = useRef(null);
   const pick = useRef(null);
   const drag = useRef(null);
-  const [point, setPoint] = useState(null);
   const [previewCamera, setPreviewCamera] = useState(null);
   const spherical = model.family === "Spherical";
   const euclidean = model.family === "Finite dihedral" && coordinates === "euclidean";
@@ -148,6 +155,7 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, set
       </span>}
     </figcaption>
     {model.rank === 2 && <PointProbe model={model} point={point} euclidean={euclidean} />}
+    {point && <button type="button" onClick={() => setPoint(null)}>Clear point</button>}
   </figure>;
 }
 
@@ -448,7 +456,7 @@ function App() {
   const changeCoupling = id => {
     const maximum = exampleById.get(id).max;
     setView(current => ({
-      ...current, id, word: current.word.slice(0, maximum), depth: Math.min(current.depth, maximum), destination: null
+      ...current, id, word: current.word.slice(0, maximum), depth: Math.min(current.depth, maximum), destination: null, point: null
     }));
   };
 
@@ -461,6 +469,8 @@ function App() {
     else url.searchParams.delete("word");
     if (view.destination) url.searchParams.set("destination", view.destination);
     else url.searchParams.delete("destination");
+    if (view.point) url.searchParams.set("point", view.point.join(","));
+    else url.searchParams.delete("point");
     if (view.zoom === 1) url.searchParams.delete("zoom");
     else url.searchParams.set("zoom", view.zoom);
     if (view.camera) url.searchParams.set("camera", encodeSphereCamera(view.camera));
@@ -485,11 +495,12 @@ function App() {
     </header>
     <div className="viewer">
       <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
-        camera={view.camera} projection={view.projection} coordinates={view.coordinates} setCamera={camera => update({camera})}
+        camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
+        setPoint={point => update({point})} setCamera={camera => update({camera})}
         choose={choose} cross={wall => choose(neighbors[wall])} />
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
         update={update} choose={choose} changeCoupling={changeCoupling}
-        changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null,
+        changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null, point: null,
           projection: view.projection, coordinates: view.coordinates})} />
     </div>
     <Inspector model={model} coordinates={view.coordinates} />
