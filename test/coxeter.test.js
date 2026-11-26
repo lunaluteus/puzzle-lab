@@ -176,10 +176,16 @@ test("a shared sphere camera retains its direction and rejects invalid coordinat
 
 test("rank-two probes get the distance from chamber interiors and distinguish limiting rays", () => {
   for (const model of examples.filter(example => example.rank === 2)) {
-    for (const {word, rays} of buildGallery(model).list.filter(chamber => chamber.word.length <= 7)) {
+    const walls = wallNames(model);
+    for (const {word, rays, neighbors} of buildGallery(model).list) {
       const [[a, b], [c, d]] = rays.map(ray => ray.map(value => value / Math.hypot(...ray)));
       assert.deepEqual(probeRankTwo(model, [a + c, b + d]),
         {kind: "inside", distance: word.length, onWall: false}, model.id + " " + word);
+      rays.forEach((ray, i) => {
+        const distance = Math.min(word.length, neighbors[walls[1 - i]]?.length ?? Infinity);
+        assert.deepEqual(probeRankTwo(model, ray),
+          {kind: "inside", distance, onWall: true}, model.id + " " + word + " " + walls[1 - i]);
+      });
     }
     assert.deepEqual(probeRankTwo(model, [0, 0]), {kind: "origin"});
     for (const ray of limitRays(model) ?? []) {

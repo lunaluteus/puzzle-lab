@@ -27,13 +27,13 @@ function initialView() {
 }
 
 function PointProbe({model, point}) {
-  let description = "Click anywhere in the plane to probe a point.";
+  let description = "Click the plane to probe a point. The marker snaps to nearby visible walls and limit rays.";
   if (point) {
     const result = probeRankTwo(model, point);
     switch (result.kind) {
       case "origin": description = "The origin belongs to every closed chamber."; break;
       case "outside": description = "Outside the Tits cone."; break;
-      case "limit": description = "At the limit boundary to plotting precision."; break;
+      case "limit": description = "At the limit boundary to plotting precision. Limit rays are excluded from the Tits cone."; break;
       case "inside":
         if (result.distance === null) description = "Inside the Tits cone, close to its limit boundary.";
         else description = (result.onWall ? "On a chamber wall." : "Inside the Tits cone.")
@@ -67,13 +67,9 @@ function Plot({model, chambers, word, zoom, camera, setCamera, choose, cross}) {
 
   function selectAt(event) {
     const box = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - box.left, y = event.clientY - box.top;
-    if (model.rank === 2) {
-      const unit = .45 * Math.min(box.width, box.height) * zoom;
-      setPoint([(x - box.width / 2) / unit, (box.height / 2 - y) / unit]);
-    }
-    const next = pick.current?.(x, y);
-    if (next !== null && next !== undefined) choose(next);
+    const hit = pick.current?.(event.clientX - box.left, event.clientY - box.top);
+    if (hit?.point) setPoint(hit.point);
+    if (typeof hit?.word === "string") choose(hit.word);
   }
 
   function endDrag(event) {

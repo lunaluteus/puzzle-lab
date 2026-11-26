@@ -38,7 +38,6 @@ function containsTriangle(point, vertices) {
   return signs.every(sign => sign >= -1e-12) || signs.every(sign => sign <= 1e-12);
 }
 
-
 export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, camera = null) {
   const ctx = plot.getContext("2d");
   const {width, height} = plot.getBoundingClientRect();
@@ -51,8 +50,12 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
     radius: .45 * Math.min(width, height) * zoom, far: Math.hypot(width, height)};
   ctx.fillStyle = palette.outside;
   ctx.fillRect(0, 0, width, height);
-  if (model.family === "Spherical") return drawSphere(ctx, view, model, chambers, word, palette, camera);
+  if (model.family === "Spherical") {
+    const pickSphere = drawSphere(ctx, view, model, chambers, word, palette, camera);
+    return (x, y) => ({word: pickSphere(x, y)});
+  }
   const project = model.rank === 3 ? slice(model).project : null;
+  const limit = limitRays(model);
   function pathFan(start, sweep) {
     ctx.beginPath();
     ctx.moveTo(view.x, view.y);
@@ -82,12 +85,12 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
   }
 
   function planarFrame() {
-    if (!limitRays(model)) {
+    if (!limit) {
       ctx.fillStyle = palette.interior;
       ctx.fillRect(0, 0, view.width, view.height);
       return null;
     }
-    const [upper, lower] = limitRays(model);
+    const [upper, lower] = limit;
     const start = Math.atan2(-upper[1], upper[0]);
     const end = Math.atan2(-lower[1], lower[0]);
     pathFan(start, end - start);
@@ -139,6 +142,28 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
     ctx.fill();
     text("xₛ", view.width - 16, view.y - 13, palette.label);
     text("xₜ", view.x + 13, 16, palette.label);
+  }
+
+  function pickFan(x, y) {
+    if (Math.hypot(x, y) < 3) return {point: [0, 0], word: null};
+    let point = [x / view.radius, -y / view.radius];
+    let snapDistance = 1.5;
+    for (const [u, v] of [...chambers.flatMap(chamber => chamber.rays), ...(limit ?? [])]) {
+      const norm = Math.hypot(u, v);
+      const a = u / norm, b = v / norm;
+      const along = a * x - b * y;
+      const across = Math.abs(b * x + a * y);
+      if (along < 0 || across >= snapDistance) continue;
+      snapDistance = across;
+      point = [a * along / view.radius, b * along / view.radius];
+    }
+    const angle = Math.atan2(-point[1], point[0]);
+    const chamber = chambers.find(chamber => {
+      const {start, sweep} = fanAngles(chamber.rays);
+      const offset = wrap(angle - start);
+      return offset <= sweep + 1e-12 || tau - offset <= 1e-12;
+    });
+    return {point, word: chamber?.word ?? null};
   }
 
   function scale([x, y]) {
@@ -231,15 +256,9 @@ export function drawPlot(plot, model, chambers, word, zoom = 1, point = null, ca
     paintDisk();
   }
 
+  if (model.rank === 2) return (x, y) => pickFan(x - view.x, y - view.y);
   return (x, y) => {
-    x -= view.x;
-    y -= view.y;
-    if (Math.hypot(x, y) < 3 && model.rank === 2) return null;
-    const chamber = chambers.find(chamber => {
-      if (model.rank === 3) return containsTriangle([x / view.radius, y / view.radius], triangle(chamber));
-      const {start, sweep} = fanAngles(chamber.rays);
-      return wrap(Math.atan2(y, x) - start) <= sweep + 1e-12;
-    });
-    return chamber?.word ?? null;
+    const point = [(x - view.x) / view.radius, (y - view.y) / view.radius];
+    return {word: chambers.find(chamber => containsTriangle(point, triangle(chamber)))?.word ?? null};
   };
 }

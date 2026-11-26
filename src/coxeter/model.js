@@ -223,6 +223,12 @@ export function limitRays(example) {
   return [[-a, 1], [1, -a]];
 }
 
+function probeInterval(u, onWall) {
+  const nearest = Math.round(u);
+  const interval = onWall ? nearest - Number(nearest > 0) : Math.floor(u);
+  return {kind: "inside", distance: Math.abs(interval), onWall};
+}
+
 export function probeRankTwo(example, point) {
   const tolerance = 1e-12;
   const norm = Math.hypot(...point);
@@ -231,17 +237,26 @@ export function probeRankTwo(example, point) {
   const limits = limitRays(example);
   if (limits) {
     const a = -limits[0][0];
-    const inward = Math.min(x + a*y, y + a*x);
+    const f = x + a * y, g = y + a * x;
+    const inward = Math.min(f, g);
     if (inward < -tolerance) return {kind: "outside"};
     if (inward <= tolerance) return {kind: "limit"};
-  }
-  if (example.family === "Affine") {
-    // On x + y = 1, the two reflections take u to −u and 2 − u.
-    const u = point[0] / (point[0] + point[1]);
-    const nearest = Math.round(u);
-    const onWall = Math.abs(u - nearest) <= Math.max(tolerance, 8 * Number.EPSILON * Math.abs(u));
-    const interval = onWall ? nearest - Number(nearest > 0) : Math.floor(u);
-    return {kind: "inside", distance: Math.abs(interval), onWall};
+    if (a === 1) {
+      // On x + y = 1, the two reflections take u to −u and 2 − u.
+      const u = point[0] / (point[0] + point[1]);
+      const onWall = Math.abs(u - Math.round(u)) <= Math.max(tolerance, 8 * Number.EPSILON * Math.abs(u));
+      return probeInterval(u, onWall);
+    }
+
+    // The reflections invert f/g and multiply it by a² or 1/a².
+    // The logarithmic coordinate makes each chamber an interval of length one.
+    const step = -Math.log(a);
+    const u = ((Math.log(f) - Math.log(g)) / step + 1) / 2;
+    const wall = 2 * Math.round(u) - 1;
+    const factor = Math.exp(-Math.abs(wall) * step);
+    // Compare the original linear forms to avoid magnifying error near a limit ray.
+    const residual = wall > 0 ? g - factor * f : f - factor * g;
+    return probeInterval(u, Math.abs(residual) <= 32 * Number.EPSILON);
   }
 
   let folded = [x, y];
