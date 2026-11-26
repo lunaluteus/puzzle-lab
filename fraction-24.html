@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分数 24 点</title>
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #f9f7ed;
+    --ink: #223d34;
+    --muted: #53675d;
+    --line: #d5dcd1;
+    --felt: #1d493e;
+    --accent: #a94331;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    background: #e9eee3;
+    font-family: system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  main { width: min(100% - 32px, 704px); margin: 0 auto; padding: 42px 0; }
+  h1 { margin: 0; font-size: clamp(2.2rem, 8vw, 4.4rem); line-height: 1.1; letter-spacing: -.05em; }
+  header p { margin: 12px 0 24px; color: var(--muted); }
+  label { font-size: .875rem; }
+  select, button { font: inherit; color: inherit; }
+  button, select { touch-action: manipulation; }
+  button:focus-visible, select:focus-visible { outline: 3px solid #c57231; outline-offset: 3px; }
+  .navigation, .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .navigation { margin-bottom: 10px; justify-content: space-between; color: var(--muted); }
+  select, .actions button {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    border-radius: 9px;
+  }
+  button:not(:disabled) { cursor: pointer; }
+  button:disabled { opacity: .48; }
+  .table {
+    background: var(--felt);
+    border: 1px solid #14372d;
+    border-radius: 18px;
+    box-shadow: 0 12px 26px #163f3424;
+    padding: clamp(12px, 4vw, 28px);
+    color: var(--paper);
+  }
+  .cards { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: clamp(6px, 2vw, 14px); }
+  .card {
+    position: relative;
+    background: var(--paper);
+    color: var(--ink);
+    display: grid;
+    min-width: 0;
+    min-height: 90px;
+    height: clamp(90px, 24vw, 144px);
+    place-content: center;
+    padding: 6px 2px;
+    border: 2px solid transparent;
+    border-radius: 11px;
+    font: 700 clamp(1rem, 5vw, 2.7rem)/1.1 Georgia, serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .card[hidden] { display: none; }
+  .card:not(:disabled):hover { background: #fffdf5; }
+  .card[aria-pressed="true"] { border-color: #e6b66e; background: #fff1cf; }
+  .card .suit, .card .order { position: absolute; top: 7px; font: 700 .85rem/1 system-ui, sans-serif; }
+  .card .suit { left: 8px; }
+  .card .order { right: 8px; color: var(--accent); }
+  .suit.red { color: var(--accent); }
+  .operators { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin-top: 16px; }
+  .operators button {
+    color: var(--paper);
+    background: #ffffff0d;
+    border: 1px solid #ffffff60;
+    border-radius: 8px;
+    min-height: 42px;
+    font: 700 1.3rem Georgia, serif;
+  }
+  .operators button:not(:disabled):hover, .operators button.hinted { background: var(--paper); color: var(--ink); }
+  #status { margin: 14px 0 0; min-height: 24px; }
+  #steps { margin: 10px 0 0; padding-left: 1.5em; color: #dce7dc; overflow-wrap: anywhere; }
+  #steps:empty { display: none; }
+  .actions { margin-top: 16px; }
+  .actions #next { margin-inline-start: auto; background: var(--felt); color: var(--paper); border-color: var(--felt); }
+  @media (max-width: 460px) {
+    main { padding-top: 28px; }
+    header p { margin-bottom: 18px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>分数 24 点</h1>
+    <p>按顺序选两张牌，再选一个运算。最后只剩一张 24 就过关。这 16 题都要用到分数。</p>
+  </header>
+  <div class="navigation">
+    <label>题目 <select id="puzzle" aria-label="题目"></select></label>
+    <span id="progress"></span>
+  </div>
+  <section class="table" aria-label="牌桌">
+    <div class="cards" id="cards"></div>
+    <div class="operators" id="operators" aria-label="运算"></div>
+    <p id="status" role="status"></p>
+    <ol id="steps" aria-label="计算步骤"></ol>
+  </section>
+  <div class="actions">
+    <button id="hint" type="button">提示一步</button>
+    <button id="undo" type="button">撤销</button>
+    <button id="reset" type="button">重来</button>
+    <button id="next" type="button">下一题</button>
+  </div>
+</main>
+<script>
+const puzzles = [
+  [1,3,4,6],
+  [1,4,5,6],
+  [1,5,5,5],
+  [1,6,6,8],
+  [1,8,12,12],
+  [2,2,11,11],
+  [2,2,13,13],
+  [2,3,5,12],
+  [2,4,10,10],
+  [2,5,5,10],
+  [2,7,7,10],
+  [3,3,7,7],
+  [3,3,8,8],
+  [4,4,7,7],
+  [5,5,7,11],
+  [5,7,7,11]
+];
+const signs = ["+", "−", "×", "÷"];
+const names = ["加", "减", "乘", "除"];
+const suits = ["♠", "♥", "♣", "♦"];
+const $ = id => document.getElementById(id);
+const solved = new Set();
+const prompt = "选两张牌开始。减法和除法按选择顺序算。";
+let puzzleIndex = 0;
+let tiles, selection, history, steps, hintedOperator, message;
+
+function fraction(n, d) {
+  if (d === 0) return null;
+  let a = Math.abs(n), b = Math.abs(d);
+  while (b !== 0) [a, b] = [b, a % b];
+  const divisor = d < 0 ? -a : a;
+  return { n: n / divisor, d: d / divisor };
+}
+
+function calculate(left, right, op) {
+  const { n: a, d: b } = left;
+  const { n: c, d } = right;
+  switch (op) {
+    case 0: return fraction(a * d + b * c, b * d);
+    case 1: return fraction(a * d - b * c, b * d);
+    case 2: return fraction(a * c, b * d);
+    case 3: return fraction(a * d, b * c);
+  }
+}
+
+function value(tile) {
+  return tile.d === 1 ? String(tile.n) : tile.n + "/" + tile.d;
+}
+
+function isGoal(tile) {
+  return tile.n === 24 && tile.d === 1;
+}
+
+function merge(items, left, right, result) {
+  return [...items.filter((_, index) => index !== left && index !== right), result];
+}
+
+function suggestion(items) {
+  if (items.length === 1) return isGoal(items[0]) ? true : null;
+  for (let left = 0; left < items.length; left++) {
+    for (let right = 0; right < items.length; right++) {
+      if (left === right) continue;
+      for (let op = 0; op < signs.length; op++) {
+        if (left > right && (op === 0 || op === 2)) continue;
+        const result = calculate(items[left], items[right], op);
+        if (result && suggestion(merge(items, left, right, result))) {
+          return { left, right, op };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function selectTile(index) {
+  if (selection.includes(index)) {
+    selection = selection.filter(i => i !== index);
+  } else if (selection.length < 2) {
+    selection = [...selection, index];
+  } else {
+    selection = [selection[0], index];
+  }
+  hintedOperator = null;
+  message = selection.length === 2
+    ? "用 " + value(tiles[selection[0]]) + " 和 " + value(tiles[selection[1]]) + " 做什么运算？"
+    : selection.length ? "再选一张牌。" : prompt;
+  render();
+}
+
+function apply(op) {
+  if (selection.length !== 2) return;
+  const [left, right] = selection;
+  const result = calculate(tiles[left], tiles[right], op);
+  if (!result) {
+    message = "不能除以零。试试别的运算或换一张牌。";
+    render();
+    return;
+  }
+  history.push(tiles);
+  const expression = value(tiles[left]) + " " + signs[op] + " " + value(tiles[right]) + " = " + value(result);
+  steps.push(expression);
+  tiles = merge(tiles, left, right, result);
+  selection = [];
+  hintedOperator = null;
+  if (tiles.length > 1) {
+    message = expression + "。继续选牌。";
+  } else if (isGoal(result)) {
+    solved.add(puzzleIndex);
+    message = solved.size === puzzles.length ? "凑成 24！16 题全部过关。" : "凑成 24！过关。";
+  } else {
+    message = "最后得到 " + value(result) + "。可以撤销一步接着试。";
+  }
+  render();
+  if (tiles.length > 1) {
+    cardButtons[0].focus();
+  } else {
+    $(isGoal(result) ? "next" : "undo").focus();
+  }
+}
+
+function reset(index) {
+  puzzleIndex = index;
+  tiles = puzzles[index].map((rank, i) => ({ n: rank, d: 1, suit: i }));
+  selection = [];
+  history = [];
+  steps = [];
+  hintedOperator = null;
+  message = prompt;
+  render();
+}
+
+function undo() {
+  if (history.length === 0) return;
+  tiles = history.pop();
+  steps.pop();
+  selection = [];
+  hintedOperator = null;
+  message = "已撤销。重新选两张牌。";
+  render();
+}
+
+function hint() {
+  const move = suggestion(tiles);
+  if (!move) {
+    message = "这一步已经走不通了。撤销一步再试。";
+  } else {
+    const { left, right, op } = move;
+    selection = [left, right];
+    hintedOperator = op;
+    message = "试试 " + value(tiles[left]) + " " + signs[op] + " " + value(tiles[right]) + "。";
+  }
+  render();
+}
+
+function addButton(parent, className, click) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.addEventListener("click", click);
+  parent.append(button);
+  return button;
+}
+
+const cardButtons = suits.map((_, index) => addButton($("cards"), "card", () => selectTile(index)));
+const operatorButtons = signs.map((sign, op) => {
+  const button = addButton($("operators"), "operator", () => apply(op));
+  button.textContent = sign;
+  button.setAttribute("aria-label", names[op]);
+  return button;
+});
+
+function render() {
+  $("puzzle").value = String(puzzleIndex);
+  $("progress").textContent = "已过 " + solved.size + " / " + puzzles.length + " 题";
+  $("status").textContent = message;
+  $("hint").disabled = tiles.length < 2;
+  $("undo").disabled = history.length === 0;
+  $("reset").disabled = history.length === 0 && selection.length === 0;
+  $("steps").replaceChildren(...steps.map(text => {
+    const step = document.createElement("li");
+    step.textContent = text;
+    return step;
+  }));
+
+  cardButtons.forEach((button, index) => {
+    const tile = tiles[index];
+    button.hidden = !tile;
+    button.disabled = tiles.length === 1 || !tile;
+    const order = selection.indexOf(index);
+    button.setAttribute("aria-pressed", String(order !== -1));
+    if (!tile) return;
+
+    const rank = document.createElement("span");
+    rank.textContent = value(tile);
+    const suit = document.createElement("span");
+    suit.className = tile.suit % 2 === 1 ? "suit red" : "suit";
+    suit.textContent = suits[tile.suit] ?? "";
+    suit.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    label.className = "order";
+    label.textContent = order < 0 ? "" : String(order + 1);
+    label.setAttribute("aria-hidden", "true");
+    button.replaceChildren(rank, suit, label);
+    button.setAttribute("aria-label", "第 " + (index + 1) + " 张牌，" + value(tile));
+  });
+
+  operatorButtons.forEach((button, op) => {
+    button.disabled = selection.length !== 2;
+    button.classList.toggle("hinted", op === hintedOperator);
+  });
+}
+
+puzzles.forEach((_, index) => {
+  const option = document.createElement("option");
+  option.value = String(index);
+  option.textContent = "第 " + (index + 1) + " 题";
+  $("puzzle").append(option);
+});
+$("puzzle").addEventListener("change", event => reset(Number(event.target.value)));
+$("hint").addEventListener("click", hint);
+$("undo").addEventListener("click", undo);
+$("reset").addEventListener("click", () => reset(puzzleIndex));
+$("next").addEventListener("click", () => reset((puzzleIndex + 1) % puzzles.length));
+reset(0);
+</script>
+</body>
+</html>

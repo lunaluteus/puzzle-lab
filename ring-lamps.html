@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>环灯</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #f3eddd;
+    --muted: #b9b8a6;
+    --accent: #f1c66e;
+    --line: #40433a;
+    --surface: #232922;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100svh;
+    color: var(--ink);
+    background: radial-gradient(ellipse at top, #282d23, #161c18 70%);
+    font: 16px/1.55 system-ui, sans-serif;
+  }
+  main { max-width: 780px; margin: auto; padding: clamp(20px, 6vw, 54px) 20px; }
+  h1 { margin: 0 0 8px; font-size: clamp(42px, 8vw, 68px); line-height: 1.1; }
+  p { margin: 0; }
+  header p, .rules label { color: var(--muted); }
+  .layout { display: grid; align-items: center; gap: clamp(20px, 5vw, 44px); margin-top: 24px; }
+  @media (min-width: 650px) { .layout { grid-template-columns: minmax(0, 1fr) 218px; } }
+  .board {
+    position: relative;
+    isolation: isolate;
+    width: min(100%, 430px);
+    aspect-ratio: 1;
+    margin-inline: auto;
+  }
+  .board::before {
+    content: "";
+    position: absolute;
+    inset: 11%;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: radial-gradient(circle, #282e25, #1d241d);
+    z-index: -1;
+  }
+  .meter { position: absolute; inset: 34%; display: grid; place-content: center; text-align: center; }
+  .meter strong { font-size: clamp(32px, 9vw, 60px); line-height: 1.15; color: var(--accent); }
+  .meter span { font-size: 14px; color: var(--muted); }
+  button, select { font: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, select:focus-visible { outline: 3px solid #daf2a6; outline-offset: 4px; }
+  .lamp {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: clamp(36px, 11vw, 52px);
+    aspect-ratio: 1;
+    border: 1px solid #647064;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: #303a31;
+    color: var(--ink);
+    font-weight: 650;
+  }
+  .lamp[aria-pressed="true"] {
+    color: #251b0b;
+    border-color: #ffe6ae;
+    background: #f1c66e;
+    box-shadow: 0 0 18px #f1c66e55;
+  }
+  .lamp.hint { outline: 3px dashed #daf2a6; outline-offset: 3px; }
+  .panel {
+    display: grid;
+    gap: 14px;
+    width: min(100%, 430px);
+    margin-inline: auto;
+  }
+  .rules, .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .rules label { display: grid; gap: 4px; font-size: 14px; }
+  .rules .rule-choice { grid-column: 1 / -1; }
+  .rules [hidden] { display: none; }
+  select, .actions button {
+    border: 1px solid #555d4d;
+    border-radius: 8px;
+    padding: 7px 10px;
+    min-height: 42px;
+    color: var(--ink);
+    background: var(--surface);
+  }
+  .actions button:hover:enabled, select:hover { border-color: var(--accent); }
+  .actions button:disabled { opacity: .45; cursor: default; }
+  .actions .primary { background: #d8b561; color: #241c0b; border-color: #d8b561; font-weight: 650; }
+  .status { min-height: 3.1em; color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>环灯</h1>
+    <p id="rule-description">点一盏灯，从它开始顺时针翻转连续几盏。试着关掉所有灯。</p>
+  </header>
+  <div class="layout">
+    <div id="board" class="board" role="group" aria-label="环上的灯">
+      <div class="meter"><strong id="lit-count">0</strong><span>盏还亮着</span></div>
+    </div>
+    <div class="panel">
+      <div class="rules">
+        <label class="rule-choice">翻灯规则<select id="rule">
+          <option value="consecutive">连续翻转</option>
+          <option value="spaced">隔着翻三盏</option>
+        </select></label>
+        <label>灯数<select id="size">
+          <option value="6">6</option><option value="7">7</option><option value="9">9</option>
+          <option value="12" selected>12</option><option value="14">14</option><option value="15">15</option>
+        </select></label>
+        <label>每次翻几盏<select id="span"></select></label>
+      </div>
+      <p>已翻转 <strong id="moves">0</strong> 次</p>
+      <div class="actions">
+        <button type="button" class="primary" id="new">换一题</button>
+        <button type="button" id="hint">提示</button>
+        <button type="button" id="undo" disabled>撤销</button>
+        <button type="button" id="reset" disabled>重来</button>
+      </div>
+      <p class="status" id="status" aria-live="polite"></p>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+
+// Cyclic differences determine the presses up to a constant in each residue class.
+function gcd(a, b) {
+  while (b !== 0) [a, b] = [b, a % b];
+  return a;
+}
+
+function countBits(mask) {
+  let count = 0;
+  for (; mask !== 0; mask &= mask - 1) count++;
+  return count;
+}
+
+function optimalPresses(lights, size, span) {
+  const classes = gcd(size, span);
+  const classSize = size / classes;
+  const odd = (span / classes) % 2 === 1;
+  const parity = Array(classes).fill(0);
+  for (let i = 0; i < size; i++) parity[i % classes] ^= (lights >> i) & 1;
+  if (parity.some(p => p !== (odd ? parity[0] : 0))) return null;
+  const press = Array(size).fill(0);
+  const counts = Array(classes).fill(0);
+  for (let residue = 0; residue < classes; residue++) {
+    let previous = residue;
+    for (let j = 1; j < classSize; j++) {
+      const i = (previous + span) % size;
+      press[i] = press[previous] ^ ((lights >> i) & 1) ^ ((lights >> ((i + size - 1) % size)) & 1);
+      counts[residue] += press[i];
+      previous = i;
+    }
+  }
+
+  // The cyclic differences agree. One lamp checks the remaining constant.
+  let discrepancy = lights & 1;
+  for (let j = 0; j < span; j++) discrepancy ^= press[(size - j) % size];
+  if (discrepancy) {
+    for (let i = 0; i < size; i += classes) press[i] ^= 1;
+    counts[0] = classSize - counts[0];
+  }
+
+  // Complementing a class changes its contribution from w presses to classSize - w.
+  const flip = counts.map(w => 2 * w > classSize);
+  if (odd && flip.filter(Boolean).length % 2 !== 0) {
+    let cheapest = 0;
+    const cost = j => Math.abs(classSize - 2 * counts[j]);
+    for (let j = 1; j < classes; j++) if (cost(j) < cost(cheapest)) cheapest = j;
+    flip[cheapest] = !flip[cheapest];
+  }
+  return press.reduce((mask, bit, i) => mask | ((bit ^ Number(flip[i % classes])) << i), 0);
+}
+
+function firstBit(mask) {
+  return 31 - Math.clz32(mask & -mask);
+}
+
+function optimalSpacedPresses(lights, windows) {
+  const basis = Array(windows.length).fill(null);
+  const kernel = [];
+
+  // Keep the press combination alongside each column of the elimination.
+  windows.forEach((window, i) => {
+    let effect = window;
+    let presses = 1 << i;
+    while (effect !== 0) {
+      const pivot = firstBit(effect);
+      if (basis[pivot] === null) {
+        basis[pivot] = { effect, presses };
+        return;
+      }
+      effect ^= basis[pivot].effect;
+      presses ^= basis[pivot].presses;
+    }
+    kernel.push(presses);
+  });
+
+  let particular = 0;
+  while (lights !== 0) {
+    const pivot = basis[firstBit(lights)];
+    if (pivot === null) return null;
+    lights ^= pivot.effect;
+    particular ^= pivot.presses;
+  }
+
+  // Offsets 0, 1, 3 give a kernel of dimension at most three.
+  let candidates = [particular];
+  for (const relation of kernel) candidates = candidates.concat(candidates.map(x => x ^ relation));
+  return candidates.reduce((best, x) => countBits(x) < countBits(best) ? x : best);
+}
+
+const board = document.getElementById("board");
+const ruleControl = document.getElementById("rule");
+const ruleDescription = document.getElementById("rule-description");
+const sizeControl = document.getElementById("size");
+const spanControl = document.getElementById("span");
+const status = document.getElementById("status");
+const undo = document.getElementById("undo");
+const reset = document.getElementById("reset");
+const hint = document.getElementById("hint");
+const litCount = document.getElementById("lit-count");
+const moves = document.getElementById("moves");
+const initialPuzzle = [1, 3, 4, 5, 6, 8].reduce((mask, lamp) => mask | (1 << (lamp - 1)), 0);
+
+let size = 12;
+let span = 3;
+let initial = initialPuzzle;
+let lights = initial;
+let history = [];
+let lamps = [];
+let windows = [];
+
+function fillSpanChoices(preferred) {
+  const options = Array.from({ length: size }, (_, i) => {
+    const option = document.createElement("option");
+    option.value = option.textContent = String(i + 1);
+    return option;
+  });
+  spanControl.replaceChildren(...options);
+  spanControl.value = String(Math.min(preferred, size));
+  span = Number(spanControl.value);
+}
+
+function render(message = "", suggested = -1) {
+  lamps.forEach((lamp, i) => {
+    const on = Boolean(lights & (1 << i));
+    lamp.setAttribute("aria-label", `${i + 1} 号灯`);
+    lamp.setAttribute("aria-pressed", String(on));
+    lamp.classList.toggle("hint", i === suggested);
+  });
+  litCount.textContent = String(countBits(lights));
+  moves.textContent = String(history.length);
+  undo.disabled = reset.disabled = history.length === 0;
+  hint.disabled = lights === 0;
+  status.textContent = lights === 0 ? `全关了！用了 ${history.length} 次。` : message;
+}
+
+function start(mask) {
+  initial = lights = mask;
+  history = [];
+  render();
+}
+
+function toggleLamp(i) {
+  history.push(lights);
+  lights ^= windows[i];
+  render();
+}
+
+function installBoard() {
+  lamps.forEach(lamp => lamp.remove());
+  lamps = [];
+  const spaced = ruleControl.value === "spaced";
+  const offsets = spaced ? [0, 1, 3] : Array.from({ length: span }, (_, i) => i);
+  spanControl.parentElement.hidden = spaced;
+  ruleDescription.textContent = spaced
+    ? "点第 i 盏灯，会翻转第 i、i+1、i+3 盏。编号绕回一圈。"
+    : "点一盏灯，从它开始顺时针翻转连续几盏。试着关掉所有灯。";
+  windows = [];
+  for (let i = 0; i < size; i++) {
+    windows.push(offsets.reduce((mask, offset) => mask ^ (1 << ((i + offset) % size)), 0));
+    const angle = 2 * Math.PI * i / size;
+    const lamp = document.createElement("button");
+    lamp.type = "button";
+    lamp.className = "lamp";
+    lamp.textContent = String(i + 1);
+    lamp.style.setProperty("--x", `${50 + 39 * Math.sin(angle)}%`);
+    lamp.style.setProperty("--y", `${50 - 39 * Math.cos(angle)}%`);
+    lamp.addEventListener("click", () => toggleLamp(i));
+    board.append(lamp);
+    lamps.push(lamp);
+  }
+}
+
+function newPuzzle() {
+  let next = 0;
+  for (const window of windows) if (Math.random() < 0.5) next ^= window;
+  start(next || windows[0]);
+}
+
+sizeControl.addEventListener("change", () => {
+  size = Number(sizeControl.value);
+  fillSpanChoices(span);
+  installBoard();
+  newPuzzle();
+});
+ruleControl.addEventListener("change", () => {
+  installBoard();
+  newPuzzle();
+});
+spanControl.addEventListener("change", () => {
+  span = Number(spanControl.value);
+  installBoard();
+  newPuzzle();
+});
+document.getElementById("new").addEventListener("click", newPuzzle);
+reset.addEventListener("click", () => start(initial));
+undo.addEventListener("click", () => {
+  if (history.length === 0) return;
+  lights = history.pop();
+  render("已撤销一步。");
+});
+hint.addEventListener("click", () => {
+  const presses = ruleControl.value === "spaced"
+    ? optimalSpacedPresses(lights, windows)
+    : optimalPresses(lights, size, span);
+  if (presses === null) {
+    render("这个开局无解。");
+    return;
+  }
+  if (presses === 0) return;
+  const next = firstBit(presses);
+  render(`最少还要 ${countBits(presses)} 次。可以先点 ${next + 1} 号灯。`, next);
+});
+
+fillSpanChoices(3);
+installBoard();
+start(initialPuzzle);
+</script>
+</body>
+</html>
