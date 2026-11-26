@@ -127,8 +127,9 @@ const groups = $("groups");
 let solver, board, initial, history, first, proposed, message;
 let tileElements, groupButtons;
 
-function install(size) {
+function install(size, requested = null) {
   solver = solverFor(size);
+  sizeControl.value = String(size);
   const columns = n => "repeat(" + n + ", minmax(0, 1fr))";
   tiles.style.gridTemplateColumns = columns(size);
   groups.style.gridTemplateColumns = columns(size - 2);
@@ -155,7 +156,9 @@ function install(size) {
   groups.replaceChildren(...groupButtons);
   const sample = solver.goal[1] + solver.goal[0] + solver.goal.slice(2, -2)
     + solver.goal.at(-1) + solver.goal.at(-2);
-  start(sample);
+  const valid = requested !== solver.goal && solver.hints.has(requested);
+  const invalidLink = requested !== null && !valid;
+  start(valid ? requested : sample, invalidLink ? "题目链接里的牌面无效，已打开示例。" : undefined);
 }
 
 function render() {
@@ -178,12 +181,21 @@ function render() {
   $("status").textContent = won ? "排好了！用了 " + history.length + " 步。" : message;
 }
 
-function start(state) {
+function start(state, prompt = "选一组三格，再选轮转方向。") {
   initial = board = state;
   history = [];
   first = 0;
   proposed = null;
-  message = "选一组三格，再选轮转方向。";
+  message = prompt;
+  const url = new URL(location.href);
+  url.searchParams.set("board", initial);
+  if (url.href !== location.href) {
+    try {
+      window.history.replaceState(window.history.state, "", url);
+    } catch {
+      // The game still works in contexts that block URL updates.
+    }
+  }
   render();
 }
 
@@ -218,7 +230,10 @@ $("new").addEventListener("click", () => {
   start(choices[Math.floor(Math.random() * choices.length)]);
 });
 sizeControl.addEventListener("change", () => install(Number(sizeControl.value)));
-install(Number(sizeControl.value));
+const requestedBoard = new URLSearchParams(location.search).get("board");
+const requestedSize = String(requestedBoard?.length);
+const allowedSize = Array.from(sizeControl.options).some(option => option.value === requestedSize);
+install(Number(allowedSize ? requestedSize : sizeControl.value), requestedBoard);
 </script>
 </body>
 </html>
