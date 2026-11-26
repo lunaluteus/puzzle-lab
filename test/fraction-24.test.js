@@ -6,8 +6,8 @@ import { runInNewContext } from "node:vm";
 const page = readFileSync(new URL("../fraction-24.html", import.meta.url), "utf8");
 const rules = page.match(/<script id="fraction-24-rules">([\s\S]+?)<\/script>/);
 assert.ok(rules, "The standalone page must include its arithmetic rules");
-const {puzzles, calculate, merge, suggestion, value} = runInNewContext(
-  rules[1] + "\n({puzzles, calculate, merge, suggestion, value})", {}, {filename: "fraction-24.html"}
+const {puzzles, calculate, merge, suggestion, undoCountToSolution, value} = runInNewContext(
+  rules[1] + "\n({puzzles, calculate, merge, suggestion, undoCountToSolution, value})", {}, {filename: "fraction-24.html"}
 );
 
 const card = n => ({n, d: 1});
@@ -61,4 +61,17 @@ test("every Fraction 24 deck can reach 24 and requires a fraction", () => {
     }
     assert.equal(value(items[0]), "24", label);
   }
+});
+
+test("Fraction 24 can find the nearest solvable board before a dead end", () => {
+  const start = [1, 3, 4, 6].map(card);
+  const firstDeadEnd = [4, 6, 4].map(card);
+  const secondDeadEnd = [4, 10].map(card);
+  assert.equal(undoCountToSolution([start]), 1);
+  assert.equal(undoCountToSolution([start, firstDeadEnd, secondDeadEnd]), 3);
+
+  const afterDivision = [card(1), card(6), {n: 3, d: 4}];
+  const afterWrongSum = [card(7), {n: 3, d: 4}];
+  assert.equal(undoCountToSolution([start, afterDivision, afterWrongSum]), 2);
+  assert.equal(undoCountToSolution([]), null);
 });

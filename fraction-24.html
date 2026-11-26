@@ -184,6 +184,13 @@ function suggestion(items) {
   }
   return null;
 }
+
+function undoCountToSolution(previousBoards) {
+  for (let index = previousBoards.length - 1; index >= 0; index--) {
+    if (suggestion(previousBoards[index])) return previousBoards.length - index;
+  }
+  return null;
+}
 </script>
 <script>
 const names = ["加", "减", "乘", "除"];
@@ -295,7 +302,9 @@ function undo() {
 function hint() {
   const move = suggestion(tiles);
   if (!move) {
-    message = "这一步已经走不通了。撤销一步再试。";
+    const count = undoCountToSolution(history);
+    message = "当前牌面无法凑成 24。";
+    if (count !== null) message += "撤销 " + count + " 步可回到有解的牌面。";
   } else {
     const { left, right, op } = move;
     selection = [left, right];
@@ -333,7 +342,7 @@ function renderProgress() {
 function render() {
   $("puzzle").value = String(puzzleIndex);
   $("status").textContent = message;
-  $("hint").disabled = tiles.length < 2;
+  $("hint").disabled = tiles.length === 1 && isGoal(tiles[0]);
   $("undo").disabled = history.length === 0;
   $("reset").disabled = history.length === 0 && selection.length === 0;
   $("steps").replaceChildren(...steps.map(text => {
