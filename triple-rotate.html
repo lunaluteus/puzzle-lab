@@ -25,9 +25,9 @@
   button:disabled { opacity: .45; }
   button:not(:disabled) { cursor: pointer; }
   .controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
-  .controls label { font-size: .875rem; color: var(--muted); }
-  .controls select { margin-inline-start: 4px; }
-  .controls select, .actions button { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 7px 12px; }
+  .controls label, .actions label { font-size: .875rem; color: var(--muted); }
+  .controls select, .actions select { margin-inline-start: 4px; }
+  select, .actions button { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 7px 12px; }
   .table { padding: clamp(9px, 3vw, 22px); background: var(--board); border-radius: 15px; color: var(--paper); }
   .tiles, .groups { display: grid; gap: clamp(3px, 1vw, 10px); }
   .tile {
@@ -48,7 +48,7 @@
   .table button:focus-visible { outline-color: #f9dca4; }
   .rotate { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
   #status { margin: 12px 0 0; min-height: 1.6em; }
-  .actions { margin-top: 14px; display: flex; gap: 7px; flex-wrap: wrap; }
+  .actions { margin-top: 14px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
   .actions #new { background: var(--board); color: var(--paper); border-color: var(--board); }
 </style>
 </head>
@@ -75,6 +75,7 @@
     <p id="status" role="status"></p>
   </section>
   <div class="actions">
+    <label>换题难度<select id="difficulty"></select></label>
     <button id="new" type="button">换一题</button>
     <button id="hint" type="button">提示</button>
     <button id="undo" type="button">撤销</button>
@@ -122,6 +123,7 @@ function solverFor(size) {
 
 const $ = id => document.getElementById(id);
 const sizeControl = $("size");
+const difficultyControl = $("difficulty");
 const tiles = $("tiles");
 const groups = $("groups");
 let solver, board, initial, history, first, proposed, message;
@@ -130,6 +132,9 @@ let tileElements, groupButtons;
 function install(size, requested = null) {
   solver = solverFor(size);
   sizeControl.value = String(size);
+  const maximum = solver.hints.get(solver.states.at(-1)).remaining;
+  const difficulties = Array.from({length: maximum}, (_, i) => new Option("最少 " + (i + 1) + " 步", i + 1));
+  difficultyControl.replaceChildren(new Option("不限", ""), ...difficulties);
   const columns = n => "repeat(" + n + ", minmax(0, 1fr))";
   tiles.style.gridTemplateColumns = columns(size);
   groups.style.gridTemplateColumns = columns(size - 2);
@@ -226,8 +231,11 @@ $("undo").addEventListener("click", () => {
 });
 $("reset").addEventListener("click", () => start(initial));
 $("new").addEventListener("click", () => {
-  const choices = solver.states.filter(state => state !== solver.goal && state !== initial);
-  start(choices[Math.floor(Math.random() * choices.length)]);
+  const difficulty = Number(difficultyControl.value);
+  const choices = solver.states.filter(state => state !== solver.goal && state !== initial
+    && (!difficulty || solver.hints.get(state).remaining === difficulty));
+  if (choices.length) start(choices[Math.floor(Math.random() * choices.length)]);
+  else start(initial, "这个难度只有这一题，已重新开局。");
 });
 sizeControl.addEventListener("change", () => install(Number(sizeControl.value)));
 const requestedBoard = new URLSearchParams(location.search).get("board");
