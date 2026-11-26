@@ -396,6 +396,11 @@ function Notes({notesRef}) {
       The coupling selector varies c from 1 to 2 in steps of 1/20.
       At c = 1, the Tits cone is an open half-plane together with the origin.
       At c &gt; 1, it is an open wedge together with the origin, and its opening angle depends on c.</p>
+    <p>Probe the same point (1, −0.6) in two realizations of the infinite dihedral group. It lies
+      inside <a href="?model=affine&amp;point=1,-0.6">the half-plane at c = 1</a> and outside
+      {" "}<a href="?model=i2-infinity-5-4&amp;point=1,-0.6">the wedge at c = 5/4</a>.
+      In the wedge, <a href="?model=i2-infinity-5-4&amp;point=1,-0.5">(1, −0.5) lies on a limit ray</a>,
+      which is excluded from the cone.</p>
     <p><strong>Rank three.</strong> The three labels <Formula latex={mathNotes.triangleOrders} /> determine
       the system up to relabeling. For a connected diagram in the standard realization,
       compare <Formula latex={mathNotes.reciprocalSum} /> to 1, with <Formula latex={mathNotes.reciprocalInfinity} />.</p>
