@@ -42,8 +42,10 @@ function initialView() {
   return { id: model.id, word, destination, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection, coordinates, point };
 }
 
-function PointProbe({model, point, euclidean}) {
-  const displayedPoint = point && euclidean ? dihedralMetric(model).forward(point) : point;
+function PointProbe({model, point, euclidean, setPoint}) {
+  const metric = euclidean ? dihedralMetric(model) : null;
+  const displayedPoint = point && metric ? metric.forward(point) : point;
+  const coordinateLimit = Number.MAX_SAFE_INTEGER / 2;
   let description = "Click the plane to probe a point. The marker snaps to nearby visible walls and limit rays.";
   if (point) {
     const result = probeRankTwo(model, point);
@@ -58,9 +60,27 @@ function PointProbe({model, point, euclidean}) {
         break;
     }
   }
-  return <p className="point-probe" role="status">
-    {displayedPoint && <b>({displayedPoint.map(x => Number(x.toFixed(3))).join(", ")}) · </b>}{description}
-  </p>;
+  return <>
+    <p className="point-probe" role="status">
+      {displayedPoint && <b>({displayedPoint.map(x => Number(x.toFixed(3))).join(", ")}) · </b>}{description}
+    </p>
+    <form className="probe-controls" aria-label="Probe coordinates" key={euclidean ? "euclidean" : "dual"}
+      onSubmit={event => {
+        event.preventDefault();
+        const fields = event.currentTarget.elements;
+        const next = [fields.namedItem("x").valueAsNumber, fields.namedItem("y").valueAsNumber];
+        setPoint(metric ? metric.inverse(next) : next);
+      }} onReset={() => setPoint(null)}>
+      <label>{euclidean ? "X" : "xₛ"}
+        <input name="x" type="number" step="any" required min={-coordinateLimit} max={coordinateLimit} />
+      </label>
+      <label>{euclidean ? "Y" : "xₜ"}
+        <input name="y" type="number" step="any" required min={-coordinateLimit} max={coordinateLimit} />
+      </label>
+      <button type="submit">Probe point</button>
+      <button type="reset" disabled={!point}>Clear point</button>
+    </form>
+  </>;
 }
 
 function Plot({model, chambers, word, zoom, camera, projection, coordinates, point, setPoint, setCamera, choose, cross}) {
@@ -154,8 +174,7 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
         <button type="button" disabled={!camera} onClick={() => setCamera(null)}>Center on selection</button>
       </span>}
     </figcaption>
-    {model.rank === 2 && <PointProbe model={model} point={point} euclidean={euclidean} />}
-    {point && <button type="button" onClick={() => setPoint(null)}>Clear point</button>}
+    {model.rank === 2 && <PointProbe model={model} point={point} euclidean={euclidean} setPoint={setPoint} />}
   </figure>;
 }
 
