@@ -23,6 +23,8 @@
     font: 16px/1.55 system-ui, sans-serif;
   }
   main { max-width: 780px; margin: auto; padding: clamp(20px, 6vw, 54px) 20px; }
+  header nav { margin-bottom: 12px; font-size: .9rem; }
+  header a { color: var(--accent); text-underline-offset: .2em; }
   h1 { margin: 0 0 8px; font-size: clamp(42px, 8vw, 68px); line-height: 1.1; }
   p { margin: 0; }
   header p, .rules label { color: var(--muted); }
@@ -49,7 +51,7 @@
   .meter span { font-size: 14px; color: var(--muted); }
   button, select { font: inherit; }
   button { cursor: pointer; }
-  button:focus-visible, select:focus-visible { outline: 3px solid #daf2a6; outline-offset: 4px; }
+  header a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid #daf2a6; outline-offset: 4px; }
   .lamp {
     position: absolute;
     left: var(--x);
@@ -105,6 +107,7 @@
 <body>
 <main>
   <header>
+    <nav aria-label="谜题导航"><a href="index.html">回谜题桌</a></nav>
     <h1>环灯</h1>
     <p id="rule-description">点一盏灯，从它开始顺时针翻转连续几盏。试着关掉所有灯。</p>
   </header>
