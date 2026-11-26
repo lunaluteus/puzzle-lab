@@ -124,7 +124,7 @@
         <button type="button" id="hint">提示</button>
         <button type="button" id="undo" disabled>撤销</button>
         <button type="button" id="reset" disabled>重来</button>
-        <button type="button" id="challenge">21 灯挑战</button>
+        <button type="button" id="challenge">随机 21 灯挑战</button>
       </div>
       <p class="status" id="status" aria-live="polite"></p>
     </div>
@@ -315,13 +315,25 @@ function newPuzzle() {
   start(next || windows[0]);
 }
 
-function startChallenge() {
+function randomChallengePuzzle() {
+  let mask = 0;
+  // Skip one press in each of the seven residue classes to obtain an extremal board.
+  for (let residue = 0; residue < 7; residue++) {
+    const skip = Math.floor(Math.random() * 3);
+    for (let copy = 0; copy < 3; copy++) {
+      if (copy !== skip) mask ^= windows[residue + 7 * copy];
+    }
+  }
+  return mask;
+}
+
+function startChallenge(random = false) {
   size = 21;
   sizeControl.value = String(size);
   ruleControl.value = "spaced";
   fillSpanChoices(span);
   installBoard();
-  start(challengePuzzle, "这局最少要按 10 次。试试看！");
+  start(random ? randomChallengePuzzle() : challengePuzzle, "这局最少要按 10 次。试试看！");
 }
 
 sizeControl.addEventListener("change", () => {
@@ -340,7 +352,7 @@ spanControl.addEventListener("change", () => {
   newPuzzle();
 });
 document.getElementById("new").addEventListener("click", newPuzzle);
-document.getElementById("challenge").addEventListener("click", startChallenge);
+document.getElementById("challenge").addEventListener("click", () => startChallenge(true));
 reset.addEventListener("click", () => start(initial));
 undo.addEventListener("click", () => {
   if (history.length === 0) return;
