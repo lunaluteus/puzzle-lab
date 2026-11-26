@@ -398,6 +398,8 @@ function Inspector({model, coordinates, chamber}) {
       : strip ? <>
         <p>Slice <Formula latex={mathNotes.affineProductSlice} /> in coordinates <Formula latex={mathNotes.affineProductAxes} />.</p>
         <p>In the selected chamber, {strip.left} ≤ xₛ ≤ {strip.right} and xᵤ {strip.above ? "≥" : "≤"} 0.</p>
+        <p>The left wall is <var>{strip.sOnLeft ? "s" : "t"}</var>, the right wall is <var>{strip.sOnLeft ? "t" : "s"}</var>,
+          and the wall at xᵤ = 0 is <var>u</var>.</p>
         <p>The Tits cone consists of <Formula latex={mathNotes.affineProductPositiveHeight} /> and
           the line <Formula latex={mathNotes.affineProductLine} /> at height zero.</p>
       </>

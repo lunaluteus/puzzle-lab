@@ -141,9 +141,9 @@ export const exampleById = new Map(examples.map(example => [example.id, example]
 export const wallNames = example => symbols.slice(0, example.rank);
 
 export function affineProductStrip({rays}) {
-  // On x_s + x_t = 1, the first two rays meet x_u = 0 and the third gives the unbounded direction.
-  const [first, second, vertical] = rays;
-  return {left: Math.min(first[0], second[0]), right: Math.max(first[0], second[0]), above: vertical[2] > 0};
+  // Each finite endpoint lies on the wall opposite the other finite ray.
+  const [[t], [s], vertical] = rays;
+  return {left: Math.min(s, t), right: Math.max(s, t), above: vertical[2] > 0, sOnLeft: s < t};
 }
 
 export function reflect(point, wall, example) {

@@ -129,7 +129,7 @@ export function drawPlot(plot, model, chambers, word, {
     line([0, view.y], [width, view.y], palette.line);
     line([origin, 0], [origin, height], palette.line);
 
-    function paintStrip({left, right, above, word: chamberWord}) {
+    function paintStrip({left, right, above, sOnLeft, word: chamberWord}) {
       const a = place(left), b = place(right), edge = above ? 0 : height;
       const selected = chamberWord === word;
       ctx.fillStyle = selected ? (word ? palette.current : palette.currentOnHome)
@@ -142,6 +142,14 @@ export function drawPlot(plot, model, chambers, word, {
       line([b, view.y], [b, edge], color, stroke);
       if ((selected || chamberWord === "") && ctx.measureText(chamberWord || "C").width + 16 < step) {
         text(chamberWord || "C", (a + b) / 2, (view.y + edge) / 2, selected ? palette.dark : palette.label);
+      }
+      if (selected && step >= 14) {
+        text("u", (a + b) / 2, view.y + (above ? -26 : 26), palette.dark);
+      }
+      if (selected && step >= 30) {
+        const y = .66 * view.y + .34 * edge;
+        if (a >= 0) text(sOnLeft ? "s" : "t", a + 9, y, palette.dark);
+        if (b <= width) text(sOnLeft ? "t" : "s", b - 9, y, palette.dark);
       }
     }
 

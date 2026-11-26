@@ -314,13 +314,13 @@ test("the affine dihedral product tiles its slice by unit half-strips", () => {
   const {list, byWord, countsByLength} = buildGallery(affineDihedralProduct);
   const strip = word => affineProductStrip(byWord.get(word));
   assert.equal(exampleById.get("a1-i2-infinity"), affineDihedralProduct);
-  assert.deepEqual(strip(""), {left: 0, right: 1, above: true});
-  assert.deepEqual(strip("s"), {left: -1, right: 0, above: true});
-  assert.deepEqual(strip("t"), {left: 1, right: 2, above: true});
-  assert.deepEqual(strip("u"), {left: 0, right: 1, above: false});
+  assert.deepEqual(strip(""), {left: 0, right: 1, above: true, sOnLeft: true});
+  assert.deepEqual(strip("s"), {left: -1, right: 0, above: true, sOnLeft: false});
+  assert.deepEqual(strip("t"), {left: 1, right: 2, above: true, sOnLeft: false});
+  assert.deepEqual(strip("u"), {left: 0, right: 1, above: false, sOnLeft: true});
   assert.deepEqual(countsByLength, [1, 3, ...Array(affineDihedralProduct.max - 1).fill(4)]);
   for (const chamber of list) {
-    const {left, right, above} = affineProductStrip(chamber);
+    const {left, right, above, sOnLeft} = affineProductStrip(chamber);
     assert.equal(right - left, 1);
     for (const [s, t, u] of chamber.rays.slice(0, 2)) {
       assert.equal(s + t, 1);
@@ -329,10 +329,12 @@ test("the affine dihedral product tiles its slice by unit half-strips", () => {
     assert.deepEqual(chamber.rays[2], [0, 0, above ? 1 : -1]);
     for (const [wall, neighbor] of Object.entries(chamber.neighbors)) {
       const next = strip(neighbor);
-      if (wall === "u") assert.deepEqual(next, {left, right, above: !above});
+      if (wall === "u") assert.deepEqual(next, {left, right, above: !above, sOnLeft});
       else {
         assert.equal(next.above, above);
-        assert.equal(Math.abs(next.left - left), 1);
+        assert.equal(next.sOnLeft, !sOnLeft);
+        const crossesLeft = (wall === "s") === sOnLeft;
+        assert.equal(crossesLeft ? next.right : next.left, crossesLeft ? left : right);
       }
     }
   }
