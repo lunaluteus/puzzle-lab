@@ -12,6 +12,18 @@ function act(point, word, model) {
   return Array.from(word).reverse().reduce((vector, wall) => reflect(vector, wall, model), point);
 }
 
+function sliceAngle(p, a, b, hyperbolic) {
+  const dot = (x, y) => x.reduce((sum, value, i) => sum + value * y[i], 0);
+  const complement = 1 - dot(p, p);
+  // The common denominator in the Klein metric cancels in the angle quotient.
+  const inner = hyperbolic
+    ? (x, y) => complement * dot(x, y) + dot(x, p) * dot(y, p)
+    : dot;
+  const u = a.map((x, i) => x - p[i]), v = b.map((x, i) => x - p[i]);
+  const cosine = inner(u, v) / Math.sqrt(inner(u, u) * inner(v, v));
+  return Math.acos(Math.max(-1, Math.min(1, cosine)));
+}
+
 for (const model of examples) {
   test(model.id + " respects the Coxeter relations and gallery walls", () => {
     const {list, byWord} = buildGallery(model);
@@ -83,10 +95,11 @@ for (const model of examples) {
       const expected = vertexAngles(model);
       const lengths = pts => pts.map(([x, y], i) => Math.hypot(x - pts[(i + 1) % 3][0], y - pts[(i + 1) % 3][1]));
       const original = lengths(list[0].rays.map(project));
-      for (const {rays} of list) {
+      for (const {rays, word} of list) {
         assert.ok(rays.every(ray => dot(ray) > 0));
         const vertices = rays.map(project);
-        if (model.family === "Hyperbolic") {
+        const hyperbolic = model.family === "Hyperbolic";
+        if (hyperbolic) {
           vertices.forEach((vertex, i) => {
             const radius = Math.hypot(...vertex);
             assert.ok(radius <= 1 + 1e-9);
@@ -95,6 +108,11 @@ for (const model of examples) {
           });
         } else {
           lengths(vertices).forEach((edge, i) => assert.ok(close(edge, original[i])));
+        }
+        for (const [i, p] of vertices.entries()) {
+          if (expected[i] === 0) continue;
+          const angle = sliceAngle(p, vertices[(i + 1) % 3], vertices[(i + 2) % 3], hyperbolic);
+          assert.ok(close(angle, expected[i]), "wrong corner angle at " + (word || "C"));
         }
       }
     });

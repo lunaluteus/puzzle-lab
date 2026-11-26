@@ -61,6 +61,8 @@ export const mathNotes = {
   reflection: tex`x_j\longmapsto x_j-2B_{ij}x_i`,
   sphere: tex`B^{-1}`,
   slice: tex`\mathbf{h}\cdot x=1`,
+  kleinMetric: tex`g_p(u,v)=\frac{u\cdot v}{1-\|p\|^2}
+    +\frac{(p\cdot u)(p\cdot v)}{(1-\|p\|^2)^2}`,
   axes: tex`(x_s,x_t)`,
   limit: tex`(-a,1),\ (1,-a),\quad a=c-\sqrt{c^2-1}`
 };

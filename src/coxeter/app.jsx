@@ -150,7 +150,7 @@ function Inspector({model}) {
     <div className="panel data">
       <h2>{spherical ? "Sphere of rays" : angles ? "Projective slice" : "The dual plane"}</h2>
       {angles ? <>
-        <p>Corner angles <Formula latex={angles} /></p>
+        <p>Intrinsic corner angles <Formula latex={angles} /></p>
         {model.family === "Hyperbolic" &&
           <p>Hyperbolic area <Formula latex={area} /> at curvature −1.</p>}
         {spherical && <p>Area on the unit sphere <Formula latex={area} /> sr.</p>}
@@ -177,9 +177,12 @@ function Notes() {
       The slice <Formula latex={mathNotes.slice} /> is Euclidean in affine type and uses the Klein disk in hyperbolic type.
       A hyperbolic boundary point belongs to the sliced cone exactly when it is an ideal vertex of a chamber.
       The dashed boundary indicates the circle or limiting rays. The gallery depth controls how many chambers are drawn.</p>
+    <p>Klein geodesics appear as straight chords. At an interior point p, measure angles using the
+      hyperbolic inner product <Formula latex={mathNotes.kleinMetric} />.</p>
     <p><a href="https://people.math.osu.edu/davis.12/papers/SurveyKM.pdf">Rémy, Kac–Moody groups, §1.1</a>
       {" · "}<a href="https://personal.math.ubc.ca/~cass/coxeter/R.html">Casselman, Coxeter Groups I</a>
-      {" · "}<a href="https://arxiv.org/abs/1305.0052">Hohlweg, Préaux and Ripoll, Lorentzian Coxeter groups</a></p>
+      {" · "}<a href="https://arxiv.org/abs/1305.0052">Hohlweg, Préaux and Ripoll, Lorentzian Coxeter groups</a>
+      {" · "}<a href="https://brice.loustau.eu/ressources/book.pdf">Loustau, Hyperbolic geometry, §8.2.3</a></p>
   </details>;
 }
 
