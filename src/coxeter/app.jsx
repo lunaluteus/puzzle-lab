@@ -5,7 +5,7 @@ import {
   dihedralProductModels, exampleById, infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder,
   presets, probeRankTwo, sphere, triangleSeries, triangleSeriesWithFour, wallNames
 } from "./model.js";
-import { exampleFormulae, mathNotes } from "./formulas.js";
+import { exampleFormulae, inspectorMath, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
 import { decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "./spherical.js";
 import maths from "virtual:coxeter-math";
@@ -477,6 +477,7 @@ const catalogImports = {
   "virtual:coxeter-extra-math": () => import("virtual:coxeter-extra-math"),
   "virtual:coxeter-triangle-math": () => import("virtual:coxeter-triangle-math"),
   "virtual:coxeter-triangle-24-math": () => import("virtual:coxeter-triangle-24-math"),
+  "virtual:coxeter-notes-math": () => import("virtual:coxeter-notes-math"),
   "virtual:coxeter-product-math": () => import("virtual:coxeter-product-math")
 };
 const catalogRequests = new Map();
@@ -519,12 +520,12 @@ function Inspector({model, coordinates, chamber}) {
       <h2>{spherical ? "Sphere of rays" : angles || strip ? "Projective slice" : model.rank === 1 ? "The dual line" : "The dual plane"}</h2>
       {model.rank === 1 ? <p>The positive half-line is the fundamental chamber. Reflecting across zero gives the other half-line. Both include zero.</p>
       : strip ? <>
-        <p>Slice <Formula latex={mathNotes.affineProductSlice} /> in coordinates <Formula latex={mathNotes.affineProductAxes} />.</p>
+        <p>Slice <Formula latex={inspectorMath.affineProductSlice} /> in coordinates <Formula latex={inspectorMath.affineProductAxes} />.</p>
         <p>In the selected chamber, {strip.left} ≤ xₛ ≤ {strip.right} and xᵤ {strip.above ? "≥" : "≤"} 0.</p>
         <p>The left wall is <var>{strip.sOnLeft ? "s" : "t"}</var>, the right wall is <var>{strip.sOnLeft ? "t" : "s"}</var>,
           and the wall at xᵤ = 0 is <var>u</var>.</p>
-        <p>The Tits cone consists of <Formula latex={mathNotes.affineProductPositiveHeight} /> and
-          the line <Formula latex={mathNotes.affineProductLine} /> at height zero.</p>
+        <p>The Tits cone consists of <Formula latex={inspectorMath.affineProductPositiveHeight} /> and
+          the line <Formula latex={inspectorMath.affineProductLine} /> at height zero.</p>
       </>
       : angles ? <>
         <p>Intrinsic corner angles <Formula latex={angles} /></p>
@@ -532,19 +533,21 @@ function Inspector({model, coordinates, chamber}) {
         {model.family === "Hyperbolic" &&
           <p>Hyperbolic area <Formula latex={area} /> at curvature −1.</p>}
         {spherical && <p>Area on the unit sphere <Formula latex={area} /> sr.</p>}
-        {covector && <p>Slice <Formula latex={mathNotes.slice} /> with <Formula latex={covector} />.</p>}
+        {covector && <p>Slice <Formula latex={inspectorMath.slice} /> with <Formula latex={covector} />.</p>}
       </> : <>
         {angle && coordinates === "euclidean"
-          ? <p>The axes are orthonormal for the dual metric <Formula latex={mathNotes.sphere} />.</p>
-          : <p>Axes show <Formula latex={mathNotes.axes} /> in simple-root dual coordinates.</p>}
+          ? <p>The axes are orthonormal for the dual metric <Formula latex={inspectorMath.sphere} />.</p>
+          : <p>Axes show <Formula latex={inspectorMath.axes} /> in simple-root dual coordinates.</p>}
         {angle ? <p>Mirror angle <Formula latex={angle} /> in the invariant Euclidean metric.</p>
-          : <p>Limit rays <Formula latex={mathNotes.limit} />.</p>}
+          : <p>Limit rays <Formula latex={inspectorMath.limit} />.</p>}
       </>}
     </div>
   </section>;
 }
 
 function Notes({notesRef}) {
+  const [opened, setOpened] = useState(false);
+  const NoteFormula = opened ? Formula : FormulaMarkup;
   useEffect(() => {
     function followNotesLink() {
       const hash = location.hash;
@@ -559,7 +562,9 @@ function Notes({notesRef}) {
     return () => window.removeEventListener("hashchange", followNotesLink);
   }, [notesRef]);
 
-  return <details id="notes" ref={notesRef}>
+  return <details id="notes" ref={notesRef} onToggle={event => {
+    if (event.currentTarget.open) setOpened(true);
+  }}>
     <summary>Notes on Coxeter groups and the Tits cone</summary>
     <h2 id="classification">Classification through rank three</h2>
     <p>The rank is the number of simple reflections. The label on a pair gives the order
@@ -567,12 +572,12 @@ function Notes({notesRef}) {
       An irreducible system has a connected diagram.</p>
     <p><strong>Rank one.</strong> A₁ consists of a single reflection and the identity.
       Its chambers are the two closed half-lines. <a href="?model=a1">Try A₁</a>.</p>
-    <p><strong>Rank two.</strong> The single label determines the dihedral system <Formula latex={mathNotes.dihedral} />.
-      The order selector lets you explore <Formula latex={mathNotes.dihedralOrders} />.
+    <p><strong>Rank two.</strong> The single label determines the dihedral system <NoteFormula latex={mathNotes.dihedral} />.
+      The order selector lets you explore <NoteFormula latex={mathNotes.dihedralOrders} />.
       Choose invariant Euclidean coordinates to see the chambers as sectors of equal angle.
-      With <Formula latex={mathNotes.infiniteDihedral} />, the same infinite dihedral group has realizations
-      with different Gram entries <Formula latex={mathNotes.dihedralCoupling} />.
-      The Gram eigenvalues are <Formula latex={mathNotes.couplingEigenvalues} />. One vanishes at c = 1.
+      With <NoteFormula latex={mathNotes.infiniteDihedral} />, the same infinite dihedral group has realizations
+      with different Gram entries <NoteFormula latex={mathNotes.dihedralCoupling} />.
+      The Gram eigenvalues are <NoteFormula latex={mathNotes.couplingEigenvalues} />. One vanishes at c = 1.
       The coupling selector varies c from 1 to 2 in steps of 1/20. A probed point stays fixed in dual coordinates as c changes.
       At c = 1, the Tits cone is an open half-plane together with the origin.
       At c &gt; 1, it is an open wedge together with the origin, and its opening angle depends on c.</p>
@@ -581,9 +586,9 @@ function Notes({notesRef}) {
       {" "}<a href="?model=i2-infinity-5-4&amp;point=1,-0.6">the wedge at c = 5/4</a>.
       In the wedge, <a href="?model=i2-infinity-5-4&amp;point=1,-0.5">(1, −0.5) lies on a limit ray</a>,
       which is excluded from the cone.</p>
-    <p><strong>Rank three.</strong> The three labels <Formula latex={mathNotes.triangleOrders} /> determine
+    <p><strong>Rank three.</strong> The three labels <NoteFormula latex={mathNotes.triangleOrders} /> determine
       the system up to relabeling. For a connected diagram in the standard realization,
-      compare <Formula latex={mathNotes.reciprocalSum} /> to 1, with <Formula latex={mathNotes.reciprocalInfinity} />.
+      compare <NoteFormula latex={mathNotes.reciprocalSum} /> to 1, with <NoteFormula latex={mathNotes.reciprocalInfinity} />.
       The angle sum shown in the inspector is π times this fraction.</p>
     <ul>
       <li><strong>Above 1.</strong> Spherical. The three irreducible types are A₃, B₃, and H₃, all available here.
@@ -594,30 +599,30 @@ function Notes({notesRef}) {
         triangles and triangles with ideal vertices. An ∞ label gives an ideal vertex with angle zero.
         {" "}<a href="?model=one-cusp">Try (2, 3, ∞)</a>.</li>
     </ul>
-    <p>The <Formula latex={mathNotes.triangleSeries} /> series passes from spherical to Euclidean at m = 6
+    <p>The <NoteFormula latex={mathNotes.triangleSeries} /> series passes from spherical to Euclidean at m = 6
       and to hyperbolic at m = 7. The order selector runs from 3 through {maxTriangleOrder}, with ∞ for the ideal corner.
       {" "}<a href="?model=b3">Start at m = 4 and change the third order</a>.</p>
-    <p>In the <Formula latex={mathNotes.triangleSeriesWithFour} /> series, m = 4 gives the Euclidean
+    <p>In the <NoteFormula latex={mathNotes.triangleSeriesWithFour} /> series, m = 4 gives the Euclidean
       right isosceles triangle. From m = 5 through {maxTriangleOrder} the selector shows compact
       hyperbolic triangles. At m = ∞, one corner is ideal.
       {" "}<a href="?model=affine-c2">Start at m = 4</a>{" or "}<a href="?model=triangle-24-infinity">jump to the ideal corner</a>.</p>
     <p>Disconnected diagrams give direct products. The rank-three products have the form
-      <Formula latex={mathNotes.product} />, where m can also be infinite.
+      <NoteFormula latex={mathNotes.product} />, where m can also be infinite.
       For the finite products, the selector varies the order m of st from 2 through {maxDihedralOrder}.
       In the m = 5 example, the diagram shows the two dihedral generators joined
       by a 5 edge. The isolated generator <var>u</var> reflects one hemisphere
       onto the other, with ten chambers on each side. <a href="?model=a1-i25">Try A₁ × I₂(5)</a>.
       The m = 2 example has three isolated generators. <a href="?model=a1-cubed">Try A₁ × A₁ × A₁</a>.
-      At m = ∞, dihedral chambers become unit intervals on <Formula latex={mathNotes.affineProductSlice} />.
+      At m = ∞, dihedral chambers become unit intervals on <NoteFormula latex={inspectorMath.affineProductSlice} />.
       Taking their product with the positive and negative half-lines gives a tiling by half-strips.
       {" "}<a href="?model=a1-i2-infinity">Try A₁ × I₂(∞)</a>.</p>
-    <p>On that slice, the vertical mirrors act by <Formula latex={mathNotes.affineProductReflections} /> and
-      keep xᵤ fixed. Composing from right to left gives <Formula latex={mathNotes.affineProductTranslations} />.
+    <p>On that slice, the vertical mirrors act by <NoteFormula latex={mathNotes.affineProductReflections} /> and
+      keep xᵤ fixed. Composing from right to left gives <NoteFormula latex={mathNotes.affineProductTranslations} />.
       In the gallery, each letter names a wall of the current chamber. From <var>C</var>, crossing{" "}
       <var>s</var> then <var>t</var> reaches <var>stC</var>.
       {" "}<a href="?model=a1-i2-infinity&amp;destination=st">Trace st to the left</a>
       {" or "}<a href="?model=a1-i2-infinity&amp;destination=ts">trace ts to the right</a>.</p>
-    <p>The horizontal mirror acts by <Formula latex={mathNotes.affineProductFlip} /> and keeps xₛ fixed.
+    <p>The horizontal mirror acts by <NoteFormula latex={mathNotes.affineProductFlip} /> and keeps xₛ fixed.
       The vertical mirrors leave xᵤ fixed, so these actions commute with <var>u</var>.
       {" "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare the su and us routes</a>.</p>
     <p><a href="https://personal.math.ubc.ca/~cass/coxeter/crm1.html">Casselman on rank two and rank three</a>
@@ -625,34 +630,34 @@ function Notes({notesRef}) {
     <h2 id="growth">How the gallery grows</h2>
     <p>A chamber at length <var>n</var> takes <var>n</var> wall crossings to reach by a shortest gallery.
       Let <var>a</var><sub>n</sub> count those chambers. Each chart starts with the single chamber <var>C</var> at length zero.
-      At depth <var>d</var>, the gallery contains <Formula latex={mathNotes.growthTotal} /> chambers.
+      At depth <var>d</var>, the gallery contains <NoteFormula latex={mathNotes.growthTotal} /> chambers.
       Turn on <strong>Cumulative</strong> in the chart to see those totals.</p>
     <ul>
-      <li><a href="?model=a1-i2-infinity&amp;depth=6&amp;growth=cumulative#growth-chart">Affine half-strips</a> have <Formula latex={mathNotes.growthProduct} />.
+      <li><a href="?model=a1-i2-infinity&amp;depth=6&amp;growth=cumulative#growth-chart">Affine half-strips</a> have <NoteFormula latex={mathNotes.growthProduct} />.
         For length two or more, choose one of the two alternating dihedral words of length <var>n</var>,
         or use length <var>n</var> − 1 and include the commuting reflection <var>u</var>.</li>
-      <li><a href="?model=affine2&amp;depth=6&amp;growth=cumulative#growth-chart">Affine Ã₂</a> has <Formula latex={mathNotes.growthAffine} />.
-        These are the positive-degree coefficients of <Formula latex={mathNotes.growthAffineSeries} />.
+      <li><a href="?model=affine2&amp;depth=6&amp;growth=cumulative#growth-chart">Affine Ã₂</a> has <NoteFormula latex={mathNotes.growthAffine} />.
+        These are the positive-degree coefficients of <NoteFormula latex={mathNotes.growthAffineSeries} />.
         {" "}<a href="https://sites.math.washington.edu/~billey/classes/reflection.groups/references/EntireBook.pdf">Björner and Brenti, §7.1</a>.</li>
-      <li><a href="?model=ideal&amp;depth=6&amp;growth=cumulative&amp;growth-scale=log#growth-chart">The ideal triangle</a> has <Formula latex={mathNotes.growthIdeal} />.
+      <li><a href="?model=ideal&amp;depth=6&amp;growth=cumulative&amp;growth-scale=log#growth-chart">The ideal triangle</a> has <NoteFormula latex={mathNotes.growthIdeal} />.
         There are three choices for the first reflection and two at each later step, since only adjacent equal
         letters cancel. The reduced word is unique.</li>
     </ul>
     <p>At depth six, these galleries contain 24, 64, and 190 chambers, respectively. The ideal example
       opens on a logarithmic scale so the earliest layers are visible alongside the later ones.</p>
     <h2>Coordinates and boundaries</h2>
-    <p>Write <Formula latex={mathNotes.coordinate} /> in the dual of the simple-root space.
-      The fundamental chamber is <Formula latex={mathNotes.chamber} />, and the Tits cone is <Formula latex={mathNotes.cone} />.
-      Crossing wall i gives <Formula latex={mathNotes.crossing} />.
-      The fundamental reflection acts by <Formula latex={mathNotes.reflection} />.</p>
-    <p>For a finite rank-three example, normalize each positive ray using the dual metric <Formula latex={mathNotes.sphere} />.
+    <p>Write <NoteFormula latex={mathNotes.coordinate} /> in the dual of the simple-root space.
+      The fundamental chamber is <NoteFormula latex={mathNotes.chamber} />, and the Tits cone is <NoteFormula latex={mathNotes.cone} />.
+      Crossing wall i gives <NoteFormula latex={mathNotes.crossing} />.
+      The fundamental reflection acts by <NoteFormula latex={mathNotes.reflection} />.</p>
+    <p>For a finite rank-three example, normalize each positive ray using the dual metric <NoteFormula latex={inspectorMath.sphere} />.
       The resulting unit sphere is tiled by spherical triangles. The drawing shows one hemisphere.
       For affine and hyperbolic triangle examples, h is the positive unit eigenvector for the smallest eigenvalue of B.
-      The slice <Formula latex={mathNotes.slice} /> is Euclidean in affine type and gives the Klein disk in hyperbolic type.
+      The slice <NoteFormula latex={inspectorMath.slice} /> is Euclidean in affine type and gives the Klein disk in hyperbolic type.
       A hyperbolic boundary point belongs to the sliced cone exactly when it is an ideal vertex of a chamber.
       The dashed boundary indicates the circle or limiting rays. The gallery depth controls how many chambers are drawn.</p>
     <p>Klein geodesics appear as straight chords. At an interior point p, measure angles using the
-      hyperbolic inner product <Formula latex={mathNotes.kleinMetric} />.
+      hyperbolic inner product <NoteFormula latex={mathNotes.kleinMetric} />.
       Switch to the Poincaré disk to see the same chambers with their angles preserved.
       The geodesics there are diameters or circular arcs orthogonal to the boundary.
       {" "}<a href="?model=hurwitz&projection=poincare">Try the (2, 3, 7) triangle in Poincaré coordinates</a>.</p>

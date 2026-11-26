@@ -7,14 +7,15 @@ import "@mathjax/src/js/input/tex/base/BaseConfiguration.js";
 import "@mathjax/src/js/input/tex/ams/AmsConfiguration.js";
 import "@mathjax/src/js/util/asyncLoad/esm.js";
 import { dihedralProductModels, examples, presets, triangleSeries, triangleSeriesWithFour } from "../src/coxeter/model.js";
-import { exampleFormulae, mathNotes } from "../src/coxeter/formulas.js";
+import { exampleFormulae, inspectorMath, mathNotes } from "../src/coxeter/formulas.js";
 
 const virtualId = "virtual:coxeter-math";
 const supplementalId = "virtual:coxeter-extra-math";
 const triangleId = "virtual:coxeter-triangle-math";
 const triangleFourId = "virtual:coxeter-triangle-24-math";
 const productId = "virtual:coxeter-product-math";
-const moduleIds = new Set([virtualId, supplementalId, triangleId, triangleFourId, productId]);
+const notesId = "virtual:coxeter-notes-math";
+const moduleIds = new Set([virtualId, supplementalId, triangleId, triangleFourId, productId, notesId]);
 
 async function typeset() {
   const adapter = liteAdaptor({fontSize: 16});
@@ -31,9 +32,10 @@ async function typeset() {
       [triangleId, collect(triangleSeries)],
       [triangleFourId, collect(triangleSeriesWithFour)],
       [productId, collect(dihedralProductModels)],
+      [notesId, Object.values(mathNotes)],
       [supplementalId, collect(examples.filter(example => !separatelyLoaded.has(example)))]
     ];
-    const initial = [...Object.values(mathNotes), ...collect(presets)];
+    const initial = [...Object.values(inspectorMath), ...collect(presets)];
     const owner = new Map(initial.map(tex => [tex, virtualId]));
     for (const [id, formulas] of groups) {
       for (const tex of new Set(formulas)) {

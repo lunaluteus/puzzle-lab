@@ -8,7 +8,7 @@ import {
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
-import { exampleFormulae, gramEntry, mathNotes } from "../src/coxeter/formulas.js";
+import { exampleFormulae, gramEntry, inspectorMath, mathNotes } from "../src/coxeter/formulas.js";
 
 function close(a, b) {
   return Math.abs(a - b) < 1e-8 * Math.max(1, Math.abs(a), Math.abs(b));
@@ -408,13 +408,13 @@ test("the MathJax modules contain every formula and resolve their shared glyphs"
     return JSON.parse(source.slice(prefix.length));
   };
   const ids = ["virtual:coxeter-extra-math", "virtual:coxeter-triangle-math", "virtual:coxeter-triangle-24-math",
-    "virtual:coxeter-product-math"];
+    "virtual:coxeter-product-math", "virtual:coxeter-notes-math"];
   const [{formulas, glyphs, deferred}, ...catalogs] = await Promise.all(
     ["virtual:coxeter-math", ...ids].map(readModule)
   );
 
   const collect = models => models.flatMap(model => Object.values(exampleFormulae(model)).filter(Boolean));
-  const initial = new Set([...Object.values(mathNotes), ...collect(presets)]);
+  const initial = new Set([...Object.values(inspectorMath), ...collect(presets)]);
   const sources = [
     examples.filter(model => !triangleSeries.includes(model) && !triangleSeriesWithFour.includes(model) &&
       !dihedralProductModels.includes(model)),
@@ -422,6 +422,7 @@ test("the MathJax modules contain every formula and resolve their shared glyphs"
     triangleSeriesWithFour,
     dihedralProductModels
   ].map(models => new Set(collect(models)));
+  sources.push(new Set(Object.values(mathNotes)));
   sources.forEach((source, index) => {
     for (const tex of source) {
       if (sources.some((other, otherIndex) => otherIndex !== index && other.has(tex))) initial.add(tex);
@@ -442,7 +443,7 @@ test("the MathJax modules contain every formula and resolve their shared glyphs"
   assert.equal(glyphCache.size, glyphIds.length);
   assert.ok(glyphCache.size > 0);
   const rendered = Object.assign({}, formulas, ...catalogs);
-  assert.deepEqual(new Set(Object.keys(rendered)), new Set([...initial, ...collect(examples)]));
+  assert.deepEqual(new Set(Object.keys(rendered)), new Set([...initial, ...collect(examples), ...Object.values(mathNotes)]));
   for (const [tex, html] of Object.entries(rendered)) {
     assert.match(html, /<svg\b/, tex);
     for (const [, reference] of html.matchAll(/<use\b[^>]*\bhref="#([^"]+)"/g)) {

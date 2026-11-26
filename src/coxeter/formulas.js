@@ -69,6 +69,17 @@ export function exampleFormulae(example) {
   return { relations, matrix, angles, angleSum, area, covector };
 }
 
+export const inspectorMath = {
+  affineProductSlice: "x_s+x_t=1",
+  affineProductAxes: "(x_s,x_u)",
+  affineProductPositiveHeight: "x_s+x_t>0",
+  affineProductLine: "x_s=x_t=0",
+  sphere: tex`B^{-1}`,
+  slice: tex`\mathbf{h}\cdot x=1`,
+  axes: tex`(x_s,x_t)`,
+  limit: tex`(-a,1),\ (1,-a),\quad a=c-\sqrt{c^2-1}`
+};
+
 export const mathNotes = {
   dihedral: tex`I_2(m)`,
   dihedralOrders: tex`m=2,\ldots,${maxDihedralOrder}`,
@@ -81,10 +92,6 @@ export const mathNotes = {
   triangleSeries: tex`(2,3,m)`,
   triangleSeriesWithFour: tex`(2,4,m)`,
   product: tex`A_1\times I_2(m)`,
-  affineProductSlice: "x_s+x_t=1",
-  affineProductAxes: "(x_s,x_u)",
-  affineProductPositiveHeight: "x_s+x_t>0",
-  affineProductLine: "x_s=x_t=0",
   affineProductReflections: tex`s:x_s\mapsto -x_s,\quad t:x_s\mapsto 2-x_s`,
   affineProductTranslations: tex`st:x_s\mapsto x_s-2,\quad ts:x_s\mapsto x_s+2`,
   affineProductFlip: tex`u:x_u\mapsto -x_u`,
@@ -93,15 +100,11 @@ export const mathNotes = {
   cone: tex`\bigcup_{w\in W}wC`,
   crossing: tex`wC\longmapsto ws_iC`,
   reflection: tex`x_j\longmapsto x_j-2B_{ij}x_i`,
-  sphere: tex`B^{-1}`,
-  slice: tex`\mathbf{h}\cdot x=1`,
   kleinMetric: tex`g_p(u,v)=\frac{u\cdot v}{1-\|p\|^2}
     +\frac{(p\cdot u)(p\cdot v)}{(1-\|p\|^2)^2}`,
-  axes: tex`(x_s,x_t)`,
   growthTotal: tex`\sum_{k=0}^{d} a_k`,
   growthAffine: tex`a_n=3n\quad(n\ge 1)`,
   growthProduct: tex`a_1=3,\quad a_n=4\quad(n\ge 2)`,
   growthIdeal: tex`a_n=3\cdot 2^{n-1}\quad(n\ge 1)`,
-  growthAffineSeries: tex`\sum_{n\ge 0}a_n t^n=\frac{1+t+t^2}{(1-t)^2}`,
-  limit: tex`(-a,1),\ (1,-a),\quad a=c-\sqrt{c^2-1}`
+  growthAffineSeries: tex`\sum_{n\ge 0}a_n t^n=\frac{1+t+t^2}{(1-t)^2}`
 };
