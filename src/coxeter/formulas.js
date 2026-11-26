@@ -1,4 +1,4 @@
-import { maxDihedralOrder, slice, wallNames } from "./model.js";
+import { gcd, maxDihedralOrder, slice, wallNames } from "./model.js";
 
 const tex = String.raw;
 const radicals = new Map([
@@ -18,11 +18,6 @@ export function gramEntry(example, i, j) {
   const m = example.exponents[i][j];
   if (m === Infinity) return "-1";
   return radicals.get(m) ?? tex`-\cos\!\left(\frac{\pi}{${m}}\right)`;
-}
-
-function gcd(a, b) {
-  while (b) [a, b] = [b, a % b];
-  return a;
 }
 
 function piFraction(n, d) {

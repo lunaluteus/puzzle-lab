@@ -84,12 +84,32 @@ export const presets = [
     "An ideal triangle with all three corners on the circle. Ideal vertices of reflected chambers belong to the slice.")
 ];
 
+export function gcd(a, b) {
+  while (b) [a, b] = [b, a % b];
+  return a;
+}
+
+export function couplingLabel([numerator, denominator]) {
+  return denominator === 1 ? String(numerator) : numerator + "/" + denominator;
+}
+
 export const maxDihedralOrder = 24;
 const moreDihedralModels = Array.from({length: maxDihedralOrder - 8}, (_, index) => {
   const order = index + 9;
   return dihedral("i2-" + order, "I₂(" + order + ")", order);
 });
-export const examples = [...presets, ...moreDihedralModels];
+const infinitePresets = presets.filter(example => example.coupling);
+export const infiniteDihedralModels = Array.from({length: 21}, (_, index) => {
+  const numerator = 20 + index;
+  const preset = infinitePresets.find(example => example.coupling[0] / example.coupling[1] === numerator / 20);
+  if (preset) return preset;
+  const divisor = gcd(numerator, 20);
+  const coupling = [numerator / divisor, 20 / divisor];
+  return infinite("i2-infinity-" + coupling.join("-"), "I₂(∞) · c = " + couplingLabel(coupling), coupling,
+    "The Tits cone is an open wedge together with the origin. The limit rays are excluded.");
+});
+export const examples = [...presets, ...moreDihedralModels,
+  ...infiniteDihedralModels.filter(example => !infinitePresets.includes(example))];
 export const dihedralModels = examples.filter(example => example.family === "Finite dihedral");
 export const exampleById = new Map(examples.map(example => [example.id, example]));
 export const wallNames = example => symbols.slice(0, example.rank);

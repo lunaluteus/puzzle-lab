@@ -1,6 +1,9 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { braidMoves, buildGallery, dihedralMetric, dihedralModels, exampleById, limitRays, presets, probeRankTwo, sphere, wallNames } from "./model.js";
+import {
+  braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels, exampleById, infiniteDihedralModels,
+  limitRays, presets, probeRankTwo, sphere, wallNames
+} from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
 import { decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "./spherical.js";
@@ -189,7 +192,7 @@ function GalleryGrowth({counts, depth}) {
   </details>;
 }
 
-function Controls({model, view, count, countsByLength, neighbors, update, choose, changeModel}) {
+function Controls({model, view, count, countsByLength, neighbors, update, choose, changeModel, changeCoupling}) {
   const destination = view.destination ?? view.word;
   return <aside aria-label="Chamber controls">
     <div className="panel">
@@ -211,6 +214,14 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         <select id="coordinates" value={view.coordinates} onChange={event => update({coordinates: event.target.value})}>
           <option value="dual">Simple-root dual</option>
           <option value="euclidean">Invariant Euclidean</option>
+        </select>
+      </>}
+      {model.coupling && <>
+        <label className="depth-label" htmlFor="coupling">Gram coupling c</label>
+        <select id="coupling" value={model.id} onChange={event => changeCoupling(event.target.value)}>
+          {infiniteDihedralModels.map(example => <option key={example.id} value={example.id}>
+            {couplingLabel(example.coupling)}
+          </option>)}
         </select>
       </>}
       <label className="depth-label" htmlFor="depth">
@@ -350,8 +361,9 @@ function Notes({notesRef}) {
     <p><strong>Rank two.</strong> The single label determines the dihedral system <Formula latex={mathNotes.dihedral} />.
       The order selector lets you explore <Formula latex={mathNotes.dihedralOrders} />.
       Choose invariant Euclidean coordinates to see the chambers as sectors of equal angle.
-      With <Formula latex={mathNotes.infiniteDihedral} />, the presets use the same infinite dihedral group
+      With <Formula latex={mathNotes.infiniteDihedral} />, the same infinite dihedral group has realizations
       with different Gram entries <Formula latex={mathNotes.dihedralCoupling} />.
+      The coupling selector varies c from 1 to 2 in steps of 1/20.
       At c = 1, the Tits cone is an open half-plane together with the origin.
       At c &gt; 1, it is an open wedge together with the origin, and its opening angle depends on c.</p>
     <p><strong>Rank three.</strong> The three labels <Formula latex={mathNotes.triangleOrders} /> determine
@@ -411,6 +423,12 @@ function App() {
       ...current, word, depth: Math.max(current.depth, word.length), destination: null
     }));
   };
+  const changeCoupling = id => {
+    const maximum = exampleById.get(id).max;
+    setView(current => ({
+      ...current, id, word: current.word.slice(0, maximum), depth: Math.min(current.depth, maximum), destination: null
+    }));
+  };
 
   useEffect(() => {
     const url = new URL(location.href);
@@ -446,7 +464,7 @@ function App() {
         camera={view.camera} projection={view.projection} coordinates={view.coordinates} setCamera={camera => update({camera})}
         choose={choose} cross={wall => choose(neighbors[wall])} />
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
-        update={update} choose={choose}
+        update={update} choose={choose} changeCoupling={changeCoupling}
         changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null,
           projection: view.projection, coordinates: view.coordinates})} />
     </div>
