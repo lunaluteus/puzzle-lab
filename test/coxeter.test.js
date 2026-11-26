@@ -155,7 +155,7 @@ test("affine A2 and the ideal triangle have the expected growth", () => {
   }
 });
 
-test("Poincaré geodesics round-trip to Klein chords and preserve finite corner angles", () => {
+test("Poincaré geodesics preserve the corners throughout each gallery", () => {
   const dot = (a, b) => a.reduce((sum, x, i) => sum + x * b[i], 0);
   const tangent = (from, to) => {
     const [x, y] = toPoincare(from);
@@ -173,18 +173,18 @@ test("Poincaré geodesics round-trip to Klein chords and preserve finite corner 
   for (const model of examples.filter(example => example.family === "Hyperbolic")) {
     const {project} = slice(model);
     const angles = vertexAngles(model);
-    const {rays} = buildGallery(model).list[0];
-    const points = rays.map(project);
-    for (const [i, point] of points.entries()) {
-      const restored = toKlein(toPoincare(point));
-      assert.ok(restored.every((value, j) => close(value, point[j])));
-      if (!angles[i]) {
-        assert.ok(close(Math.hypot(...toPoincare(point)), 1));
-        continue;
+    for (const {rays, word} of buildGallery(model).list) {
+      const points = rays.map(project);
+      for (const [i, point] of points.entries()) {
+        const diskPoint = toPoincare(point);
+        const restored = toKlein(diskPoint);
+        assert.ok(restored.every((value, j) => close(value, point[j])));
+        if (!angles[i]) assert.ok(close(Math.hypot(...diskPoint), 1));
+        const a = tangent(point, points[(i + 1) % 3]);
+        const b = tangent(point, points[(i + 2) % 3]);
+        const angle = Math.atan2(Math.abs(a[0] * b[1] - a[1] * b[0]), dot(a, b));
+        assert.ok(close(angle, angles[i]), model.id + " " + (word || "C") + " corner " + i);
       }
-      const a = tangent(point, points[(i + 1) % 3]);
-      const b = tangent(point, points[(i + 2) % 3]);
-      assert.ok(close(Math.acos(dot(a, b) / (Math.hypot(...a) * Math.hypot(...b))), angles[i]));
     }
   }
   assert.equal(poincareCircle([-.5, 0], [.5, 0]), null);
