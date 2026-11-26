@@ -278,27 +278,43 @@ function ShortestGallery({model, word, destination, followingGallery, onStep, ro
 
 function GalleryGrowth({counts, depth, changeDepth}) {
   const [logarithmic, setLogarithmic] = useState(false);
+  const [cumulative, setCumulative] = useState(false);
   const scale = logarithmic ? Math.log1p : count => count;
-  const peak = scale(Math.max(...counts));
-  const labels = counts.map((count, length) =>
-    "Length " + length + ", " + count + (count === 1 ? " chamber" : " chambers"));
+  let total = 0;
+  const values = cumulative ? counts.map(count => {
+    total += count;
+    return total;
+  }) : counts;
+  const peak = scale(Math.max(...values));
+  const labels = values.map((count, length) => {
+    const quantity = count + (count === 1 ? " chamber" : " chambers");
+    return cumulative ? "Depth " + length + ", " + quantity + " in total" : "Length " + length + ", " + quantity;
+  });
   return <details className="gallery-growth">
-    <summary>Chambers by length</summary>
+    <summary>{cumulative ? "Chambers through depth" : "Chambers by length"}</summary>
     <p>Choose a bar to set the gallery depth.</p>
-    <label className="growth-scale" title="Bar heights use log(1 + count) when enabled.">
-      <input type="checkbox" checked={logarithmic} onChange={event => setLogarithmic(event.target.checked)} />
-      Log scale
-    </label>
+    <div className="growth-options">
+      <label className="growth-scale" title="Bar heights use log(1 + count) when enabled.">
+        <input type="checkbox" checked={logarithmic} onChange={event => setLogarithmic(event.target.checked)} />
+        Log scale
+      </label>
+      <label>
+        <input type="checkbox" checked={cumulative} onChange={event => setCumulative(event.target.checked)} />
+        Cumulative
+      </label>
+    </div>
     <p aria-live="polite">{labels[depth]}</p>
-    <div className="growth-chart" role="radiogroup" aria-label="Gallery depth by word length">
-      {counts.map((count, length) => <label key={length} className="growth-column" title={labels[length]}>
+    <div className="growth-chart" role="radiogroup" aria-label={cumulative ? "Gallery depth by cumulative count" : "Gallery depth by word length"}>
+      {values.map((count, length) => <label key={length} className="growth-column" title={labels[length]}>
         <input type="radio" name="growth-depth" value={length} checked={length === depth}
           aria-label={labels[length]} onChange={() => changeDepth(length)} />
         <span className="growth-bar" aria-hidden="true"
           style={{height: count ? "max(1px, " + 100 * scale(count) / peak + "%)" : 0}} />
       </label>)}
     </div>
-    <div className="growth-axis" aria-hidden="true"><span>0</span><span>Word length</span><span>{counts.length - 1}</span></div>
+    <div className="growth-axis" aria-hidden="true">
+      <span>0</span><span>{cumulative ? "Gallery depth" : "Word length"}</span><span>{counts.length - 1}</span>
+    </div>
     <p><a href="#growth">Compare growth across examples</a></p>
   </details>;
 }
@@ -582,7 +598,8 @@ function Notes({notesRef}) {
     <h2 id="growth">How the gallery grows</h2>
     <p>A chamber at length <var>n</var> takes <var>n</var> wall crossings to reach by a shortest gallery.
       Let <var>a</var><sub>n</sub> count those chambers. Each chart starts with the single chamber <var>C</var> at length zero.
-      At depth <var>d</var>, the gallery contains <Formula latex={mathNotes.growthTotal} /> chambers.</p>
+      At depth <var>d</var>, the gallery contains <Formula latex={mathNotes.growthTotal} /> chambers.
+      Turn on <strong>Cumulative</strong> in the chart to see those totals.</p>
     <ul>
       <li><a href="?model=a1-i2-infinity&amp;depth=6">Affine half-strips</a> have <Formula latex={mathNotes.growthProduct} />.
         For length two or more, choose one of the two alternating dihedral words of length <var>n</var>,
