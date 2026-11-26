@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildGallery, exampleById, examples, limitRays, probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
+import { braidMoves, buildGallery, exampleById, examples, limitRays, probeRankTwo, reflect, slice, sphere, vertexAngles, wallNames } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { exampleFormulae, gramEntry } from "../src/coxeter/formulas.js";
 
@@ -45,6 +45,15 @@ for (const model of examples) {
       if (chamber.word) {
         const prefix = byWord.get(chamber.word.slice(0, -1));
         assert.equal(prefix?.neighbors[chamber.word.at(-1)], chamber.word);
+      }
+      for (const {word: alternate} of braidMoves(chamber.word, model)) {
+        assert.notEqual(alternate, chamber.word);
+        let step = "";
+        for (const [index, wall] of Array.from(alternate).entries()) {
+          step = byWord.get(step).neighbors[wall];
+          assert.equal(step?.length, index + 1);
+        }
+        assert.equal(step, chamber.word);
       }
       const directions = chamber.rays.map(ray =>
         ray.map(x => Math.round(x / Math.hypot(...ray) * 1e13)).join(","));

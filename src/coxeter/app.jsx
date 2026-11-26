@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { buildGallery, exampleById, examples, limitRays, probeRankTwo, sphere, wallNames } from "./model.js";
+import { braidMoves, buildGallery, exampleById, examples, limitRays, probeRankTwo, sphere, wallNames } from "./model.js";
 import { exampleFormulae, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
 import { decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "./spherical.js";
@@ -138,19 +138,31 @@ function Plot({model, chambers, word, zoom, camera, setCamera, choose, cross}) {
   </figure>;
 }
 
-function ShortestGallery({word, destination, onStep}) {
+function GallerySteps({route, byWord, word, label, onStep}) {
+  const steps = [""];
+  for (const wall of route) steps.push(byWord.get(steps.at(-1)).neighbors[wall]);
+  return <ol className="gallery-steps" role="list" aria-label={label}>
+    {steps.map((step, i) => <li key={step}>
+      <button type="button" aria-current={step === word ? "step" : undefined}
+        aria-label={step ? "Step " + i + ", " + step.split("").join(" ") + " C" : "Fundamental chamber C"}
+        onClick={() => onStep(step)}>{route[i - 1] ?? "C"}</button>
+    </li>)}
+  </ol>;
+}
+
+function ShortestGallery({model, word, destination, onStep}) {
   if (!destination) return null;
-  const steps = ["", ...Array.from(destination, (_, index) => destination.slice(0, index + 1))];
+  const {byWord} = buildGallery(model);
+  const {value: alternative} = braidMoves(destination, model).next();
   return <details className="gallery-route">
     <summary>Shortest gallery</summary>
-    <ol className="gallery-steps" role="list">
-      {steps.map(step => <li key={step}>
-        <button type="button" aria-current={step === word ? "step" : undefined}
-          aria-label={step ? "Step " + step.length + ", " + step.split("").join(" ") + " C" : "Fundamental chamber C"}
-          onClick={() => onStep(step)}>{step.slice(-1) || "C"}</button>
-      </li>)}
-    </ol>
-    <p>Each letter crosses one wall. Braid relations can give other shortest galleries.</p>
+    <GallerySteps route={destination} byWord={byWord} word={word} label="Shortest route" onStep={onStep} />
+    {alternative ? <>
+      <p>The braid relation <code>{destination.slice(alternative.index, alternative.index + alternative.length)}</code>
+        {" = "}<code>{alternative.word.slice(alternative.index, alternative.index + alternative.length)}</code>
+        {" "}gives another route to the same chamber in the same number of steps.</p>
+      <GallerySteps route={alternative.word} byWord={byWord} word={word} label="Alternate shortest route" onStep={onStep} />
+    </> : <p>Each letter crosses one wall.</p>}
   </details>;
 }
 
@@ -195,7 +207,7 @@ function Controls({model, view, count, neighbors, update, choose, changeModel}) 
       </div>
       <div className="tools"><button type="button" id="home" disabled={!view.word}
         onClick={() => choose("")}>Home chamber</button></div>
-      <ShortestGallery word={view.word} destination={destination}
+      <ShortestGallery model={model} word={view.word} destination={destination}
         onStep={word => update({word, destination})} />
       <p>{view.word.length === model.max && !["Finite dihedral", "Spherical"].includes(model.family)
         ? "Gallery limit reached. Cross back or select another chamber."

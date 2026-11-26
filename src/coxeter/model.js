@@ -92,6 +92,23 @@ export function reflect(point, wall, example) {
 
 const galleryCache = new WeakMap();
 
+export function* braidMoves(word, example) {
+  for (let index = 0; index < word.length - 1; index++) {
+    const a = word[index], b = word[index + 1];
+    if (a === b) continue;
+    const length = example.exponents[symbols.indexOf(a)][symbols.indexOf(b)];
+    if (index + length > word.length) continue;
+    let replacement = "";
+    for (let j = 0; j < length; j++) {
+      if (word[index + j] !== (j % 2 === 0 ? a : b)) break;
+      replacement += j % 2 === 0 ? b : a;
+    }
+    if (replacement.length === length) {
+      yield {word: word.slice(0, index) + replacement + word.slice(index + length), index, length};
+    }
+  }
+}
+
 export function buildGallery(example) {
   if (galleryCache.has(example)) return galleryCache.get(example);
   const walls = wallNames(example);
@@ -110,17 +127,7 @@ export function buildGallery(example) {
         best = normalForm(current.slice(0, adjacentRepeat) + current.slice(adjacentRepeat + 2));
         break;
       }
-      for (let i = 0; i < current.length - 1; i++) {
-        const a = current[i], b = current[i + 1];
-        const length = example.exponents[symbols.indexOf(a)][symbols.indexOf(b)];
-        if (i + length > current.length) continue;
-        let alternative = "";
-        for (let j = 0; j < length; j++) {
-          if (current[i + j] !== (j % 2 === 0 ? a : b)) break;
-          alternative += j % 2 === 0 ? b : a;
-        }
-        if (alternative.length !== length) continue;
-        const next = current.slice(0, i) + alternative + current.slice(i + length);
+      for (const {word: next} of braidMoves(current, example)) {
         if (!seen.has(next)) { seen.add(next); queue.push(next); }
       }
     }
