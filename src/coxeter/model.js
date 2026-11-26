@@ -117,14 +117,26 @@ export const infiniteDihedralModels = Array.from({length: 21}, (_, index) => {
     "The Tits cone is an open wedge together with the origin. The limit rays are excluded.");
 });
 export const maxTriangleOrder = 24;
-const moreTriangleModels = Array.from({length: maxTriangleOrder - 7}, (_, index) => {
-  const m = index + 8;
-  return triangle("triangle-23-" + m, "Triangle · (2, 3, " + m + ")", "Hyperbolic", [2, 3, m],
-    "A compact right triangle. Its smallest angle is π/" + m + ".");
-});
-export const triangleSeries = [...presets, ...moreTriangleModels]
-  .filter(example => example.rank === 3 && example.exponents[0][1] === 2 && example.exponents[1][2] === 3)
-  .sort((a, b) => a.exponents[0][2] - b.exponents[0][2]);
+function compactRightTriangles(q, first) {
+  return Array.from({length: maxTriangleOrder - first + 1}, (_, index) => {
+    const m = first + index;
+    return triangle("triangle-2" + q + "-" + m, "Triangle · (2, " + q + ", " + m + ")", "Hyperbolic", [2, q, m],
+      "A compact right triangle. Its smallest angle is π/" + m + ".");
+  });
+}
+const moreTriangleModels = [
+  ...compactRightTriangles(3, 8),
+  ...compactRightTriangles(4, 6),
+  triangle("triangle-24-infinity", "Triangle · (2, 4, ∞)", "Hyperbolic", [2, 4, Infinity],
+    "A hyperbolic right triangle with a π/4 angle and one ideal vertex.")
+];
+function rightTriangleSeries(q) {
+  return [...presets, ...moreTriangleModels]
+    .filter(example => example.rank === 3 && example.exponents[0][1] === 2 && example.exponents[1][2] === q)
+    .sort((a, b) => a.exponents[0][2] - b.exponents[0][2]);
+}
+export const triangleSeries = rightTriangleSeries(3);
+export const triangleSeriesWithFour = rightTriangleSeries(4);
 const productPresets = presets.filter(example =>
   example.rank === 3 && example.exponents[0][2] === 2 && example.exponents[1][2] === 2);
 const finiteProducts = Array.from({length: maxDihedralOrder - 1}, (_, index) => {

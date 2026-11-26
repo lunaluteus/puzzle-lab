@@ -79,6 +79,7 @@ export const mathNotes = {
   reciprocalSum: tex`\frac{1}{p}+\frac{1}{q}+\frac{1}{r}`,
   reciprocalInfinity: tex`1/\infty=0`,
   triangleSeries: tex`(2,3,m)`,
+  triangleSeriesWithFour: tex`(2,4,m)`,
   product: tex`A_1\times I_2(m)`,
   affineProductSlice: "x_s+x_t=1",
   affineProductAxes: "(x_s,x_u)",
