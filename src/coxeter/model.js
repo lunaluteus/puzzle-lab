@@ -154,7 +154,9 @@ export function buildGallery(example) {
       chamber.neighbors[wall] = word;
     }
   }
-  const gallery = { list, byWord };
+  const countsByLength = Array(example.max + 1).fill(0);
+  for (const {word} of list) countsByLength[word.length]++;
+  const gallery = { list, byWord, countsByLength };
   galleryCache.set(example, gallery);
   return gallery;
 }

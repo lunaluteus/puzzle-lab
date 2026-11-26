@@ -166,7 +166,23 @@ function ShortestGallery({model, word, destination, onStep}) {
   </details>;
 }
 
-function Controls({model, view, count, neighbors, update, choose, changeModel}) {
+function GalleryGrowth({counts, depth}) {
+  const peak = Math.max(...counts);
+  const labels = counts.map((count, length) =>
+    "Length " + length + ", " + count + (count === 1 ? " chamber" : " chambers"));
+  return <details className="gallery-growth">
+    <summary>Chambers by length</summary>
+    <p aria-live="polite">{labels[depth]}</p>
+    <div className="growth-chart" role="img" aria-label={labels.join(". ")}>
+      {counts.map((count, length) => <span key={length} className="growth-bar"
+        title={labels[length]} data-highlight={length === depth}
+        style={{height: count ? "max(1px, " + 100 * count / peak + "%)" : 0}} />)}
+    </div>
+    <div className="growth-axis" aria-hidden="true"><span>0</span><span>Word length</span><span>{counts.length - 1}</span></div>
+  </details>;
+}
+
+function Controls({model, view, count, countsByLength, neighbors, update, choose, changeModel}) {
   const destination = view.destination ?? view.word;
   return <aside aria-label="Chamber controls">
     <div className="panel">
@@ -187,6 +203,7 @@ function Controls({model, view, count, neighbors, update, choose, changeModel}) 
         }} />
       <p id="count">{count} {count === 1 ? "chamber" : "chambers"}
         {model.family === "Spherical" ? " in gallery" : " drawn"}</p>
+      <GalleryGrowth counts={countsByLength} depth={view.depth} />
       {model.rank === 3 && <>
         <label className="depth-label" htmlFor="zoom">Zoom <output>{view.zoom}×</output></label>
         <input id="zoom" type="range" min="1" max="4" step="0.25" value={view.zoom}
@@ -369,7 +386,7 @@ function App() {
       <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
         camera={view.camera} setCamera={camera => update({camera})}
         choose={choose} cross={wall => choose(neighbors[wall])} />
-      <Controls model={model} view={view} count={chambers.length} neighbors={neighbors}
+      <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
         update={update} choose={choose}
         changeModel={id => setView({id, word: "", zoom: 1, depth: exampleById.get(id).depth, camera: null})} />
     </div>

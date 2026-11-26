@@ -133,11 +133,20 @@ for (const model of examples) {
 }
 
 test("affine A2 and the ideal triangle have the expected growth", () => {
-  const affine = buildGallery(exampleById.get("affine2")).list;
-  const ideal = buildGallery(exampleById.get("ideal")).list;
-  for (let depth = 0; depth <= 7; depth++) {
-    assert.equal(affine.filter(c => c.word.length <= depth).length, 1 + 3 * depth * (depth + 1) / 2);
-    assert.equal(ideal.filter(c => c.word.length <= depth).length, 1 + 3 * (2 ** depth - 1));
+  const affine = buildGallery(exampleById.get("affine2")).countsByLength;
+  const ideal = buildGallery(exampleById.get("ideal")).countsByLength;
+  assert.equal(affine[0], 1);
+  assert.equal(ideal[0], 1);
+  let affineTotal = 1, idealTotal = 1;
+  for (let depth = 1; depth < affine.length; depth++) {
+    assert.equal(affine[depth], 3 * depth);
+    affineTotal += affine[depth];
+    assert.equal(affineTotal, 1 + 3 * depth * (depth + 1) / 2);
+  }
+  for (let depth = 1; depth < ideal.length; depth++) {
+    assert.equal(ideal[depth], 3 * 2 ** (depth - 1));
+    idealTotal += ideal[depth];
+    assert.equal(idealTotal, 1 + 3 * (2 ** depth - 1));
   }
 });
 

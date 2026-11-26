@@ -67,11 +67,15 @@
   details p { margin: .75em 0; }
   details ul { padding-inline-start: 1.35em; }
   details li + li { margin-top: .35em; }
-  .gallery-route { padding: 8px; margin-top: 10px; font-size: .875rem; }
+  .gallery-route, .gallery-growth { padding: 8px; margin-top: 10px; font-size: .875rem; }
   .gallery-steps { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 8px 0 0; padding: 0; }
   .gallery-steps li + li { margin: 0; }
   .gallery-steps button { min-width: 32px; font-family: ui-monospace, monospace; }
   .gallery-steps [aria-current="step"] { background: #e2eee6; border-color: var(--accent); font-weight: 700; }
+  .growth-chart { display: flex; align-items: end; gap: 2px; height: 60px; margin-top: 6px; border-bottom: 1px solid #aebdb7; }
+  .growth-bar { flex: 1 0 0; background: #6b9690; border-radius: 2px 2px 0 0; }
+  .growth-bar[data-highlight="true"] { background: var(--accent); outline: 1px solid var(--accent); }
+  .growth-axis { display: flex; justify-content: space-between; font-size: .75rem; margin-top: 2px; }
   code { font-family: ui-monospace, monospace; font-size: .94em; }
   @media (max-width: 700px) {
     .viewer { grid-template-columns: 1fr; }
