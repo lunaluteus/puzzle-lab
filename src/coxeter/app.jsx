@@ -274,7 +274,10 @@ function Notes() {
     </ul>
     <p>Disconnected diagrams give direct products. The rank-three products have the form
       <Formula latex={mathNotes.product} />, where m can also be infinite.
-      The viewer includes A₁ × A₁ × A₁, the case m = 2.</p>
+      In the m = 5 example, the diagram shows the two dihedral generators joined
+      by a 5 edge. The isolated generator <var>u</var> reflects one hemisphere
+      onto the other, with ten chambers on each side. <a href="?model=a1-i25">Try A₁ × I₂(5)</a>.
+      The m = 2 example has three isolated generators. <a href="?model=a1-cubed">Try A₁ × A₁ × A₁</a>.</p>
     <p><a href="https://personal.math.ubc.ca/~cass/coxeter/crm1.html">Casselman on rank two and rank three</a>
       {" · "}<a href="https://people.math.osu.edu/davis.12/old_papers/djs2.pdf">Davis, Januszkiewicz and Scott on triangle groups, §7.3</a></p>
     <h2>Coordinates and boundaries</h2>

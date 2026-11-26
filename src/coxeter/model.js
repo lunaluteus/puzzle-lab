@@ -48,6 +48,7 @@ export const examples = [
   dihedral("i27", "I₂(7) · m = 7", 7),
   dihedral("i28", "I₂(8) · m = 8", 8),
   spherical("a1-cubed", "A₁ × A₁ × A₁ · (2, 2, 2)", [2, 2, 2], 8, 3),
+  spherical("a1-i25", "A₁ × I₂(5) · (5, 2, 2)", [5, 2, 2], 20, 6),
   spherical("a3", "A₃ · (2, 3, 3)", [2, 3, 3], 24, 6),
   spherical("b3", "B₃ · (2, 3, 4)", [2, 3, 4], 48, 9),
   spherical("h3", "H₃ · (2, 3, 5)", [2, 3, 5], 120, 15),
