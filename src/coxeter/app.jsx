@@ -380,6 +380,15 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         </select>
       </>}
       {triangleOptions && <>
+        <label className="depth-label" htmlFor="triangle-series">Right triangle series</label>
+        <select id="triangle-series" value={model.exponents[1][2]} onChange={event => {
+          const choices = event.target.value === "3" ? triangleSeries : triangleSeriesWithFour;
+          const sameOrder = choices.find(example => example.exponents[0][2] === model.exponents[0][2]);
+          changeModel((sameOrder ?? choices[0]).id);
+        }}>
+          <option value="3">(2, 3, m)</option>
+          <option value="4">(2, 4, m)</option>
+        </select>
         <label className="depth-label" htmlFor="triangle-order">Order m in (2, {model.exponents[1][2]}, m)</label>
         <select id="triangle-order" value={model.id} onChange={event => changeModel(event.target.value)}>
           {triangleOptions.map(example => <option key={example.id} value={example.id}>
@@ -606,6 +615,8 @@ function Notes({notesRef}) {
       right isosceles triangle. From m = 5 through {maxTriangleOrder} the selector shows compact
       hyperbolic triangles. At m = ∞, one corner is ideal.
       {" "}<a href="?model=affine-c2">Start at m = 4</a>{" or "}<a href="?model=triangle-24-infinity">jump to the ideal corner</a>.</p>
+    <p>Use <strong>Right triangle series</strong> to compare the two series at the same m.
+      At m = 4, this takes you between the spherical B₃ chamber and the Euclidean C̃₂ chamber.</p>
     <p>Disconnected diagrams give direct products. The rank-three products have the form
       <NoteFormula latex={mathNotes.product} />, where m can also be infinite.
       For the finite products, the selector varies the order m of st from 2 through {maxDihedralOrder}.
