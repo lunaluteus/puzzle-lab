@@ -20,15 +20,18 @@ function initialView() {
   const query = new URLSearchParams(location.search);
   const model = exampleById.get(query.get("model")) ?? exampleById.get(defaultId);
   const budget = query.has("depth") ? Number(query.get("depth")) : model.depth;
+  const {byWord} = buildGallery(model);
   const requested = query.get("word");
-  const word = typeof requested === "string" && buildGallery(model).byWord.has(requested) ? requested : "";
+  const word = byWord.has(requested) ? requested : "";
+  const target = query.get("destination");
+  const destination = target && byWord.has(target) ? target : null;
   const budgetDepth = Number.isInteger(budget) ? Math.min(budget, model.max) : model.depth;
-  const depth = Math.max(word.length, budgetDepth);
+  const depth = Math.max(word.length, destination?.length ?? 0, budgetDepth);
   const zoom = Number(query.get("zoom"));
   const camera = model.family === "Spherical" ? decodeSphereCamera(query.get("camera")) : null;
   const projection = model.family === "Hyperbolic" && query.get("projection") === "poincare" ? "poincare" : "klein";
   const coordinates = model.family === "Finite dihedral" && query.get("coordinates") === "euclidean" ? "euclidean" : "dual";
-  return { id: model.id, word, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection, coordinates };
+  return { id: model.id, word, destination, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1, camera, projection, coordinates };
 }
 
 function PointProbe({model, point, euclidean}) {
@@ -160,11 +163,15 @@ function GallerySteps({route, byWord, word, label, onStep}) {
   </ol>;
 }
 
-function ShortestGallery({model, word, destination, onStep}) {
+function ShortestGallery({model, word, destination, followingGallery, onStep}) {
+  const details = useRef(null);
+  useEffect(() => {
+    if (followingGallery && details.current) details.current.open = true;
+  }, [followingGallery]);
   if (!destination) return null;
   const {byWord} = buildGallery(model);
   const {value: alternative} = braidMoves(destination, model).next();
-  return <details className="gallery-route">
+  return <details className="gallery-route" ref={details}>
     <summary>Shortest gallery</summary>
     <GallerySteps route={destination} byWord={byWord} word={word} label="Shortest route" onStep={onStep} />
     {alternative ? <>
@@ -262,7 +269,7 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
       </div>
       <div className="tools"><button type="button" id="home" disabled={!view.word}
         onClick={() => choose("")}>Home chamber</button></div>
-      <ShortestGallery model={model} word={view.word} destination={destination}
+      <ShortestGallery model={model} word={view.word} destination={destination} followingGallery={Boolean(view.destination)}
         onStep={word => update({word, destination})} />
       <p>{view.word.length === model.max && !["Finite line", "Finite dihedral", "Spherical"].includes(model.family)
         ? "Gallery limit reached. Cross back or select another chamber."
@@ -452,6 +459,8 @@ function App() {
     else url.searchParams.set("depth", view.depth);
     if (view.word) url.searchParams.set("word", view.word);
     else url.searchParams.delete("word");
+    if (view.destination) url.searchParams.set("destination", view.destination);
+    else url.searchParams.delete("destination");
     if (view.zoom === 1) url.searchParams.delete("zoom");
     else url.searchParams.set("zoom", view.zoom);
     if (view.camera) url.searchParams.set("camera", encodeSphereCamera(view.camera));
