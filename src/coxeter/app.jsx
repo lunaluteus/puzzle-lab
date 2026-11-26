@@ -277,19 +277,25 @@ function ShortestGallery({model, word, destination, followingGallery, onStep, ro
 }
 
 function GalleryGrowth({counts, depth, changeDepth}) {
-  const peak = Math.max(...counts);
+  const [logarithmic, setLogarithmic] = useState(false);
+  const scale = logarithmic ? Math.log1p : count => count;
+  const peak = scale(Math.max(...counts));
   const labels = counts.map((count, length) =>
     "Length " + length + ", " + count + (count === 1 ? " chamber" : " chambers"));
   return <details className="gallery-growth">
     <summary>Chambers by length</summary>
     <p>Choose a bar to set the gallery depth.</p>
+    <label className="growth-scale" title="Bar heights use log(1 + count) when enabled.">
+      <input type="checkbox" checked={logarithmic} onChange={event => setLogarithmic(event.target.checked)} />
+      Log scale
+    </label>
     <p aria-live="polite">{labels[depth]}</p>
     <div className="growth-chart" role="radiogroup" aria-label="Gallery depth by word length">
       {counts.map((count, length) => <label key={length} className="growth-column" title={labels[length]}>
         <input type="radio" name="growth-depth" value={length} checked={length === depth}
           aria-label={labels[length]} onChange={() => changeDepth(length)} />
         <span className="growth-bar" aria-hidden="true"
-          style={{height: count ? "max(1px, " + 100 * count / peak + "%)" : 0}} />
+          style={{height: count ? "max(1px, " + 100 * scale(count) / peak + "%)" : 0}} />
       </label>)}
     </div>
     <div className="growth-axis" aria-hidden="true"><span>0</span><span>Word length</span><span>{counts.length - 1}</span></div>
