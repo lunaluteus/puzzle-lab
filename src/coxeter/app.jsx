@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels, exampleById, infiniteDihedralModels,
@@ -293,10 +293,25 @@ function Diagram({model}) {
   </div>;
 }
 
-function Formula({latex, label}) {
+function FormulaMarkup({latex, label, html}) {
   return <span className="formula" role="math" data-tex={latex}
     aria-label={label ? label + " " + latex : latex}
-    dangerouslySetInnerHTML={{__html: maths.formulas[latex]}} />;
+    dangerouslySetInnerHTML={html ? {__html: html} : undefined}>{html ? null : latex}</span>;
+}
+
+let supplementalFormulas;
+function SupplementalFormula(props) {
+  supplementalFormulas ??= import("virtual:coxeter-extra-math").then(module => module.default, () => ({}));
+  const formulas = use(supplementalFormulas);
+  return <FormulaMarkup {...props} html={formulas[props.latex]} />;
+}
+
+function Formula(props) {
+  const html = maths.formulas[props.latex];
+  if (html) return <FormulaMarkup {...props} html={html} />;
+  return <Suspense fallback={<FormulaMarkup {...props} />}>
+    <SupplementalFormula {...props} />
+  </Suspense>;
 }
 
 function Inspector({model, coordinates}) {
