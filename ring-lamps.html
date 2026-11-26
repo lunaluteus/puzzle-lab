@@ -70,6 +70,8 @@
     box-shadow: 0 0 18px #f1c66e55;
   }
   .lamp.hint { outline: 3px dashed #daf2a6; outline-offset: 3px; }
+  .lamp.parity { outline: 3px dotted #9adcea; outline-offset: 3px; }
+  .lamp.hint:focus-visible, .lamp.parity:focus-visible { outline-style: solid; }
   .panel {
     display: grid;
     gap: 14px;
@@ -197,7 +199,7 @@ function firstBit(mask) {
   return 31 - Math.clz32(mask & -mask);
 }
 
-function optimalSpacedPresses(lights, windows) {
+function pressBasis(windows) {
   const basis = Array(windows.length).fill(null);
   const kernel = [];
 
@@ -216,7 +218,11 @@ function optimalSpacedPresses(lights, windows) {
     }
     kernel.push(presses);
   });
+  return {basis, kernel};
+}
 
+function optimalSpacedPresses(lights, windows) {
+  const {basis, kernel} = pressBasis(windows);
   let particular = 0;
   while (lights !== 0) {
     const pivot = basis[firstBit(lights)];
@@ -231,6 +237,24 @@ function optimalSpacedPresses(lights, windows) {
   return candidates.reduce((best, x) => countBits(x) < countBits(best) ? x : best);
 }
 
+function oddParityGroup(lights, windows) {
+  const {basis} = pressBasis(windows);
+  while (lights !== 0) {
+    const pivot = firstBit(lights);
+    if (basis[pivot]) {
+      lights ^= basis[pivot].effect;
+      continue;
+    }
+    // A missing pivot gives a free coordinate. Work backwards to make the
+    // resulting group intersect every basis vector in an even number of lamps.
+    let group = 1 << pivot;
+    for (let i = pivot - 1; i >= 0; i--) {
+      if (basis[i] && countBits(group & basis[i].effect) % 2 !== 0) group |= 1 << i;
+    }
+    return group;
+  }
+  return 0;
+}
 </script>
 <script>
 "use strict";
@@ -274,14 +298,16 @@ function fillSpanChoices(preferred) {
   span = Number(spanControl.value);
 }
 
-function render(message = "", suggested = -1) {
+function render(message = "", suggested = -1, parityGroup = 0) {
   const editing = draft !== null;
   const displayed = draft ?? lights;
   lamps.forEach((lamp, i) => {
     const on = Boolean(displayed & (1 << i));
-    lamp.setAttribute("aria-label", `${i + 1} 号灯`);
+    const inGroup = Boolean(parityGroup & (1 << i));
+    lamp.setAttribute("aria-label", `${i + 1} 号灯${inGroup ? "，奇偶性检查组" : ""}`);
     lamp.setAttribute("aria-pressed", String(on));
     lamp.classList.toggle("hint", i === suggested);
+    lamp.classList.toggle("parity", inGroup);
   });
   litCount.textContent = String(countBits(displayed));
   moves.textContent = String(history.length);
@@ -430,7 +456,9 @@ hint.addEventListener("click", () => {
     ? optimalSpacedPresses(lights, windows)
     : optimalPresses(lights, size, span);
   if (presses === null) {
-    render("这个开局无解。");
+    const group = oddParityGroup(lights, windows);
+    const labels = lamps.flatMap((_, i) => group & (1 << i) ? [i + 1] : []).join("、");
+    render(`这个开局无解。${labels} 号灯中有奇数盏亮着。每次操作会翻转其中偶数盏，亮灯数保持为奇数。全灭时这里应有 0 盏亮灯。`, -1, group);
     return;
   }
   if (presses === 0) return;

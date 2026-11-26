@@ -6,8 +6,8 @@ import { runInNewContext } from "node:vm";
 const page = readFileSync(new URL("../ring-lamps.html", import.meta.url), "utf8");
 const rules = page.match(/<script id="ring-lamps-rules">([\s\S]+?)<\/script>/);
 assert.ok(rules, "The standalone page must include its ring lamp solvers");
-const {optimalPresses, optimalSpacedPresses} = runInNewContext(
-  rules[1] + "\n({optimalPresses, optimalSpacedPresses})", {}, {filename: "ring-lamps.html"}
+const {optimalPresses, optimalSpacedPresses, oddParityGroup} = runInNewContext(
+  rules[1] + "\n({optimalPresses, optimalSpacedPresses, oddParityGroup})", {}, {filename: "ring-lamps.html"}
 );
 
 function effects(size, offsets) {
@@ -18,6 +18,8 @@ function effects(size, offsets) {
 function pressEffect(presses, windows) {
   return windows.reduce((lights, window, index) => presses & (1 << index) ? lights ^ window : lights, 0);
 }
+
+const weight = mask => [...mask.toString(2)].filter(bit => bit === "1").length;
 
 function minimumDistances(windows) {
   const distances = new Int8Array(1 << windows.length).fill(-1);
@@ -42,12 +44,17 @@ function compareWithShortestPaths(windows, solve, rule) {
     const presses = solve(lights);
     const expected = distances[lights];
     const context = rule + ", lights " + lights.toString(2);
+    const group = oddParityGroup(lights, windows);
     if (expected === -1) {
       assert.equal(presses, null, context);
+      assert.ok(group > 0 && group < distances.length, context);
+      assert.equal(weight(group & lights) % 2, 1, context);
+      assert.ok(windows.every(effect => weight(group & effect) % 2 === 0), context);
     } else {
+      assert.equal(group, 0, context);
       assert.ok(Number.isInteger(presses) && presses >= 0 && presses < distances.length, context);
       assert.equal(pressEffect(presses, windows), lights, context);
-      assert.equal([...presses.toString(2)].filter(bit => bit === "1").length, expected, context);
+      assert.equal(weight(presses), expected, context);
     }
   }
 
