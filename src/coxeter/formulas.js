@@ -54,6 +54,14 @@ export function exampleFormulae(example) {
 }
 
 export const mathNotes = {
+  dihedral: tex`I_2(m)`,
+  dihedralPresets: tex`m=2,\ldots,8`,
+  infiniteDihedral: tex`m=\infty`,
+  dihedralCoupling: tex`B_{st}=-c,\quad c\ge 1`,
+  triangleOrders: tex`(p,q,r)=(m_{st},m_{tu},m_{us})`,
+  reciprocalSum: tex`\frac{1}{p}+\frac{1}{q}+\frac{1}{r}`,
+  reciprocalInfinity: tex`1/\infty=0`,
+  product: tex`A_1\times I_2(m)`,
   coordinate: tex`x_i=\lambda(\alpha_i)`,
   chamber: tex`C=\{x:x_i\ge 0\}`,
   cone: tex`\bigcup_{w\in W}wC`,

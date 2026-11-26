@@ -247,7 +247,37 @@ function Inspector({model}) {
 
 function Notes() {
   return <details>
-    <summary>Coordinates, boundaries, and references</summary>
+    <summary>Notes on Coxeter groups and the Tits cone</summary>
+    <h2 id="classification">Classification through rank three</h2>
+    <p>The rank is the number of simple reflections. The label on a pair gives the order
+      of their product. A label of 2 means the reflections commute, so the diagram omits that edge.
+      An irreducible system has a connected diagram.</p>
+    <p><strong>Rank one.</strong> A₁ consists of a single reflection and the identity.
+      The viewer starts at rank two.</p>
+    <p><strong>Rank two.</strong> The single label determines the dihedral system <Formula latex={mathNotes.dihedral} />.
+      The finite presets run from <Formula latex={mathNotes.dihedralPresets} />.
+      With <Formula latex={mathNotes.infiniteDihedral} />, the presets use the same infinite dihedral group
+      with different Gram entries <Formula latex={mathNotes.dihedralCoupling} />.
+      At c = 1, the Tits cone is an open half-plane together with the origin.
+      At c &gt; 1, it is an open wedge together with the origin, and its opening angle depends on c.</p>
+    <p><strong>Rank three.</strong> The three labels <Formula latex={mathNotes.triangleOrders} /> determine
+      the system up to relabeling. For a connected diagram in the standard realization,
+      compare <Formula latex={mathNotes.reciprocalSum} /> to 1, with <Formula latex={mathNotes.reciprocalInfinity} />.</p>
+    <ul>
+      <li><strong>Above 1.</strong> Spherical. The three irreducible types are A₃, B₃, and H₃, all available here.
+        {" "}<a href="?model=h3">Try H₃</a>.</li>
+      <li><strong>Equal to 1.</strong> Euclidean. The three irreducible affine types are Ã₂, C̃₂, and G̃₂, all available here.
+        {" "}<a href="?model=affine2">Try Ã₂</a>.</li>
+      <li><strong>Below 1.</strong> Hyperbolic. There are infinitely many triples. The seven presets include compact
+        triangles and triangles with ideal vertices. An ∞ label gives an ideal vertex with angle zero.
+        {" "}<a href="?model=one-cusp">Try (2, 3, ∞)</a>.</li>
+    </ul>
+    <p>Disconnected diagrams give direct products. The rank-three products have the form
+      <Formula latex={mathNotes.product} />, where m can also be infinite.
+      The viewer includes A₁ × A₁ × A₁, the case m = 2.</p>
+    <p><a href="https://personal.math.ubc.ca/~cass/coxeter/crm1.html">Casselman on rank two and rank three</a>
+      {" · "}<a href="https://people.math.osu.edu/davis.12/old_papers/djs2.pdf">Davis, Januszkiewicz and Scott on triangle groups, §7.3</a></p>
+    <h2>Coordinates and boundaries</h2>
     <p>Write <Formula latex={mathNotes.coordinate} /> in the dual of the simple-root space.
       The fundamental chamber is <Formula latex={mathNotes.chamber} />, and the Tits cone is <Formula latex={mathNotes.cone} />.
       Crossing wall i gives <Formula latex={mathNotes.crossing} />.
