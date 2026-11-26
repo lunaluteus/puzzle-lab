@@ -300,7 +300,11 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
   const destination = view.destination ?? view.word;
   const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
     model, new URL(location.pathname, location.href)).href : null;
-  const changeDepth = depth => update({depth, word: view.word.length <= depth ? view.word : "", destination: null});
+  const changeDepth = depth => update({
+    depth,
+    word: view.word.length <= depth ? view.word : "",
+    destination: view.destination?.length <= depth ? view.destination : null
+  });
   return <aside aria-label="Chamber controls">
     <div className="panel">
       <label htmlFor="model">Coxeter example</label>
