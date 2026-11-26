@@ -318,6 +318,11 @@ test("the affine dihedral product tiles its slice by unit half-strips", () => {
   assert.deepEqual(strip("s"), {left: -1, right: 0, above: true, sOnLeft: false});
   assert.deepEqual(strip("t"), {left: 1, right: 2, above: true, sOnLeft: false});
   assert.deepEqual(strip("u"), {left: 0, right: 1, above: false, sOnLeft: true});
+  assert.deepEqual(strip("st"), {left: -2, right: -1, above: true, sOnLeft: true});
+  assert.deepEqual(strip("ts"), {left: 2, right: 3, above: true, sOnLeft: true});
+  const point = [.25, .75, 2];
+  assert.deepEqual(act(point, "st", affineDihedralProduct), [-1.75, 2.75, 2]);
+  assert.deepEqual(act(point, "ts", affineDihedralProduct), [2.25, -1.25, 2]);
   assert.deepEqual(countsByLength, [1, 3, ...Array(affineDihedralProduct.max - 1).fill(4)]);
   for (const chamber of list) {
     const {left, right, above, sOnLeft} = affineProductStrip(chamber);

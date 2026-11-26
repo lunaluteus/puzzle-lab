@@ -84,6 +84,8 @@ export const mathNotes = {
   affineProductAxes: "(x_s,x_u)",
   affineProductPositiveHeight: "x_s+x_t>0",
   affineProductLine: "x_s=x_t=0",
+  affineProductReflections: tex`s:x_s\mapsto -x_s,\quad t:x_s\mapsto 2-x_s`,
+  affineProductTranslations: tex`st:x_s\mapsto x_s-2,\quad ts:x_s\mapsto x_s+2`,
   coordinate: tex`x_i=\lambda(\alpha_i)`,
   chamber: tex`C=\{x:x_i\ge 0\}`,
   cone: tex`\bigcup_{w\in W}wC`,
