@@ -360,7 +360,7 @@ function Formula(props) {
 }
 
 function Inspector({model, coordinates}) {
-  const {relations, matrix, eigenvalues, angles, area, covector, angle} = exampleFormulae(model);
+  const {relations, matrix, eigenvalues, angles, angleSum, area, covector, angle} = exampleFormulae(model);
   const spherical = model.family === "Spherical";
   const signature = {"Finite line": "Positive definite", "Finite dihedral": "Positive definite", Spherical: "Positive definite",
     Affine: "Positive semidefinite", Indefinite: "Signature (1, 1)", Hyperbolic: "Signature (2, 1)"};
@@ -381,6 +381,7 @@ function Inspector({model, coordinates}) {
       {model.rank === 1 ? <p>The positive half-line is the fundamental chamber. Reflecting across zero gives the other half-line. Both include zero.</p>
       : angles ? <>
         <p>Intrinsic corner angles <Formula latex={angles} /></p>
+        <p>Angle sum <Formula latex={angleSum} label="Triangle angle sum" />.</p>
         {model.family === "Hyperbolic" &&
           <p>Hyperbolic area <Formula latex={area} /> at curvature −1.</p>}
         {spherical && <p>Area on the unit sphere <Formula latex={area} /> sr.</p>}
@@ -435,7 +436,8 @@ function Notes({notesRef}) {
       which is excluded from the cone.</p>
     <p><strong>Rank three.</strong> The three labels <Formula latex={mathNotes.triangleOrders} /> determine
       the system up to relabeling. For a connected diagram in the standard realization,
-      compare <Formula latex={mathNotes.reciprocalSum} /> to 1, with <Formula latex={mathNotes.reciprocalInfinity} />.</p>
+      compare <Formula latex={mathNotes.reciprocalSum} /> to 1, with <Formula latex={mathNotes.reciprocalInfinity} />.
+      The angle sum shown in the inspector is π times this fraction.</p>
     <ul>
       <li><strong>Above 1.</strong> Spherical. The three irreducible types are A₃, B₃, and H₃, all available here.
         {" "}<a href="?model=h3">Try H₃</a>.</li>

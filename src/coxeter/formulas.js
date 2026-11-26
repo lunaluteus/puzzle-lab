@@ -61,10 +61,11 @@ export function exampleFormulae(example) {
   const finite = orders.filter(Number.isFinite);
   const d = finite.reduce((a, b) => a * b / gcd(a, b), 1);
   const sum = finite.reduce((total, m) => total + d / m, 0);
+  const angleSum = piFraction(sum, d);
   const area = example.family === "Affine" ? null : piFraction(Math.abs(d - sum), d);
   const covector = example.family === "Spherical" ? null :
     tex`\mathbf{h}\approx\left(${slice(example).height.map(x => Number(x.toFixed(4))).join(", ")}\right)`;
-  return { relations, matrix, angles, area, covector };
+  return { relations, matrix, angles, angleSum, area, covector };
 }
 
 export const mathNotes = {

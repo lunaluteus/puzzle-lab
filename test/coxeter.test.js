@@ -294,7 +294,7 @@ test("the (2, 3, m) series crosses all three geometries with stable links", () =
   assert.equal(triangleSeries.at(-1).id, "one-cusp");
 });
 
-test("matrix entries, eigenvalues and angle deficits stay exact in the inspector", () => {
+test("matrix entries, eigenvalues and triangle angles stay exact in the inspector", () => {
   const entry = id => gramEntry(exampleById.get(id), 0, 1);
   assert.equal(entry("a2"), "-\\frac{1}{2}");
   assert.equal(entry("b2"), "-\\frac{\\sqrt{2}}{2}");
@@ -307,6 +307,12 @@ test("matrix entries, eigenvalues and angle deficits stay exact in the inspector
   assert.equal(eigenvalues("affine"), "\\lambda_+=2,\\quad \\lambda_-=0");
   assert.equal(eigenvalues("i2-infinity-5-4"), "\\lambda_+=\\frac{9}{4},\\quad \\lambda_-=-\\frac{1}{4}");
   assert.equal(eigenvalues("i2-24"), "\\lambda_{\\pm}=1\\pm\\cos\\!\\left(\\frac{\\pi}{24}\\right)");
+  const angleSum = id => exampleFormulae(exampleById.get(id)).angleSum;
+  assert.equal(angleSum("h3"), "\\frac{31\\pi}{30}");
+  assert.equal(angleSum("affine-g2"), "\\pi");
+  assert.equal(angleSum("hurwitz"), "\\frac{41\\pi}{42}");
+  assert.equal(angleSum("triangle-23-24"), "\\frac{7\\pi}{8}");
+  assert.equal(angleSum("ideal"), "0");
   assert.equal(exampleFormulae(exampleById.get("hurwitz")).area, "\\frac{\\pi}{42}");
   assert.equal(exampleFormulae(exampleById.get("triangle-23-24")).area, "\\frac{\\pi}{8}");
   assert.equal(exampleFormulae(exampleById.get("h3")).area, "\\frac{\\pi}{30}");
