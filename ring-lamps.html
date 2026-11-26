@@ -134,7 +134,7 @@
   </div>
   <p class="notes"><a href="ring-lamps-notes.html">21 灯挑战的题解</a></p>
 </main>
-<script>
+<script id="ring-lamps-rules">
 "use strict";
 
 // Cyclic differences determine the presses up to a constant in each residue class.
@@ -224,6 +224,10 @@ function optimalSpacedPresses(lights, windows) {
   for (const relation of kernel) candidates = candidates.concat(candidates.map(x => x ^ relation));
   return candidates.reduce((best, x) => countBits(x) < countBits(best) ? x : best);
 }
+
+</script>
+<script>
+"use strict";
 
 const board = document.getElementById("board");
 const ruleControl = document.getElementById("rule");
