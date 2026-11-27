@@ -481,8 +481,14 @@ $("puzzle").addEventListener("change", event => reset(Number(event.target.value)
 $("hint").addEventListener("click", hint);
 $("undo").addEventListener("click", undo);
 $("redo").addEventListener("click", redo);
-$("reset").addEventListener("click", () => reset(puzzleIndex));
-$("next").addEventListener("click", () => reset((puzzleIndex + 1) % puzzles.length));
+$("reset").addEventListener("click", event => {
+  reset(puzzleIndex);
+  if (event.detail === 0) cardButtons[0].focus();
+});
+$("next").addEventListener("click", event => {
+  reset((puzzleIndex + 1) % puzzles.length);
+  if (event.detail === 0) cardButtons[0].focus();
+});
 window.addEventListener("storage", event => {
   if (!progressStorage || event.storageArea !== progressStorage) return;
   if (event.key === null) solved.clear();
