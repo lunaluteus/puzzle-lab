@@ -103,6 +103,9 @@
   .growth-column:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 1; }
   .growth-bar { width: 100%; background: #6b9690; border-radius: 2px 2px 0 0; }
   .growth-column input:checked + .growth-bar { background: var(--accent); outline: 1px solid var(--accent); }
+  .growth-selection span, .growth-column[data-chamber-length]::after { color: #794c20; }
+  .growth-column[data-chamber-length]::after { content: "◆"; position: absolute; inset: 1px 0 auto;
+    text-align: center; font-size: .75rem; line-height: 1; text-shadow: 0 0 2px white, 0 0 3px white; pointer-events: none; }
   .growth-axis { display: flex; justify-content: space-between; font-size: .75rem; margin-top: 2px; }
   code { font-family: ui-monospace, monospace; font-size: .94em; }
   @media (max-width: 700px) {

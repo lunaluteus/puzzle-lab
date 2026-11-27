@@ -336,7 +336,7 @@ function ShortestGallery({model, word, gallery, followingGallery, onStep, routeH
   </details>;
 }
 
-function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, update, chartHref}) {
+function GalleryGrowth({counts, depth, chamberLength, changeDepth, cumulative, logarithmic, update, chartHref}) {
   const scale = logarithmic ? Math.log1p : count => count;
   let total = 0;
   const values = cumulative ? counts.map(count => {
@@ -348,6 +348,7 @@ function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, upd
     const quantity = count + (count === 1 ? " chamber" : " chambers");
     return cumulative ? "Depth " + length + ", " + quantity + " in total" : "Length " + length + ", " + quantity;
   });
+  const barLabels = labels.map((label, length) => length === chamberLength ? label + ", selected chamber length" : label);
   return <details id="growth-chart" className="gallery-growth">
     <summary>{cumulative ? "Chambers through depth" : "Chambers by length"}</summary>
     <p>Choose a bar to set the gallery depth.</p>
@@ -362,10 +363,12 @@ function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, upd
       </label>
     </div>
     <p aria-live="polite">{labels[depth]}</p>
+    <p className="growth-selection"><span aria-hidden="true">◆</span> Selected chamber length {chamberLength}</p>
     <div className="growth-chart" role="radiogroup" aria-label={cumulative ? "Gallery depth by cumulative count" : "Gallery depth by word length"}>
-      {values.map((count, length) => <label key={length} className="growth-column" title={labels[length]}>
+      {values.map((count, length) => <label key={length} className="growth-column" title={barLabels[length]}
+        data-chamber-length={length === chamberLength ? length : undefined}>
         <input type="radio" name="growth-depth" value={length} checked={length === depth}
-          aria-label={labels[length]} onChange={() => changeDepth(length)} />
+          aria-label={barLabels[length]} onChange={() => changeDepth(length)} />
         <span className="growth-bar" aria-hidden="true"
           style={{height: count ? "max(1px, " + 100 * scale(count) / peak + "%)" : 0}} />
       </label>)}
@@ -458,7 +461,7 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
         onChange={event => changeDepth(Number(event.target.value))} />
       <p id="count">{count} {count === 1 ? "chamber" : "chambers"}
         {model.family === "Spherical" ? " in gallery" : " drawn"}</p>
-      <GalleryGrowth counts={countsByLength} depth={view.depth} changeDepth={changeDepth} update={update}
+      <GalleryGrowth counts={countsByLength} depth={view.depth} chamberLength={view.word.length} changeDepth={changeDepth} update={update}
         cumulative={view.cumulativeGrowth} logarithmic={view.logarithmicGrowth} chartHref={chartHref} />
       {model.rank === 3 && <>
         <label className="depth-label" htmlFor="zoom">Zoom <output>{view.zoom}×</output></label>
