@@ -390,13 +390,14 @@ function Controls({model, view, count, countsByLength, neighbors, idealGallery, 
         <select id="triangle-series" value={model.exponents[1][2]} onChange={event => {
           const choices = event.target.value === "3" ? triangleSeries : triangleSeriesWithFour;
           const sameOrder = choices.find(example => example.exponents[0][2] === model.exponents[0][2]);
-          changeModel((sameOrder ?? choices[0]).id);
+          changeModel((sameOrder ?? choices[0]).id, {preserveDepth: true});
         }}>
           <option value="3">(2, 3, m)</option>
           <option value="4">(2, 4, m)</option>
         </select>
         <label className="depth-label" htmlFor="triangle-order">Order m in (2, {model.exponents[1][2]}, m)</label>
-        <select id="triangle-order" value={model.id} onChange={event => changeModel(event.target.value)}>
+        <select id="triangle-order" value={model.id}
+          onChange={event => changeModel(event.target.value, {preserveDepth: true})}>
           {triangleOptions.map(example => <option key={example.id} value={example.id}>
             {orderLabel(example.exponents[0][2])}
           </option>)}
@@ -735,6 +736,13 @@ function App() {
       ...current, word, depth: Math.max(current.depth, word.length), destination: null
     }));
   };
+  const changeModel = (id, {preserveDepth = false} = {}) => {
+    const next = exampleById.get(id);
+    setView(current => ({
+      ...current, id, word: "", destination: null, zoom: 1, camera: null, point: null,
+      depth: preserveDepth ? Math.min(current.depth, next.max) : next.depth
+    }));
+  };
   const changeCoupling = id => {
     const maximum = exampleById.get(id).max;
     setView(current => ({
@@ -769,10 +777,7 @@ function App() {
         <CopyLink key={viewHref} href={viewHref} kind="View" copiedMessage="Link copied. It opens at the current chamber." />
       </div>
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
-        idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling}
-        changeModel={id => setView(current => ({
-          ...current, id, word: "", destination: null, zoom: 1, depth: exampleById.get(id).depth, camera: null, point: null
-        }))} />
+        idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling} changeModel={changeModel} />
     </div>
     <Inspector model={model} coordinates={view.coordinates} chamber={chamber} />
     <Notes notesRef={notes} />
