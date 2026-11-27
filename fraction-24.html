@@ -219,6 +219,20 @@ function operationText(left, right, op) {
   return `${value(tiles[left])} ${signs[op]} ${value(tiles[right])}`;
 }
 
+function recordMove(left, right, op, result) {
+  const expression = operationText(left, right, op) + " = " + value(result);
+  history.push(tiles);
+  steps.push({left, right, op, expression});
+  tiles = merge(tiles, left, right, result);
+  return expression;
+}
+
+function resultMessage(result, expression) {
+  if (tiles.length > 1) return expression + "。继续选牌。";
+  if (!isGoal(result)) return "最后得到 " + value(result) + "。可以撤销一步接着试。";
+  return solved.size === puzzles.length ? "凑成 24！16 题全部过关。" : "凑成 24！过关。";
+}
+
 function selectTile(index) {
   if (selection.includes(index)) {
     selection = selection.filter(i => i !== index);
@@ -244,15 +258,10 @@ function apply(op) {
     render();
     return;
   }
-  history.push(tiles);
-  const expression = operationText(left, right, op) + " = " + value(result);
-  steps.push(expression);
-  tiles = merge(tiles, left, right, result);
+  const expression = recordMove(left, right, op, result);
   selection = [];
   hintedOperator = null;
-  if (tiles.length > 1) {
-    message = expression + "。继续选牌。";
-  } else if (isGoal(result)) {
+  if (tiles.length === 1 && isGoal(result)) {
     solved.add(puzzleIndex);
     try {
       progressStorage?.setItem(progressKeys[puzzleIndex], "1");
@@ -260,10 +269,9 @@ function apply(op) {
       // The completed puzzle still counts for the current page.
     }
     renderProgress();
-    message = solved.size === puzzles.length ? "凑成 24！16 题全部过关。" : "凑成 24！过关。";
-  } else {
-    message = "最后得到 " + value(result) + "。可以撤销一步接着试。";
   }
+  message = resultMessage(result, expression);
+  saveAttempt();
   render();
   if (tiles.length > 1) {
     cardButtons[0].focus();
@@ -272,7 +280,7 @@ function apply(op) {
   }
 }
 
-function reset(index) {
+function reset(index, savedMoves = []) {
   puzzleIndex = index;
   tiles = puzzles[index].map((rank, i) => ({ n: rank, d: 1, suit: i }));
   selection = [];
@@ -280,21 +288,36 @@ function reset(index) {
   steps = [];
   hintedOperator = null;
   message = prompt;
+  for (const move of savedMoves) {
+    const {left, right, op} = move ?? {};
+    if (!Number.isInteger(left) || !Number.isInteger(right) || !Number.isInteger(op)
+      || left === right || !tiles[left] || !tiles[right] || !signs[op]) return reset(index);
+    const result = calculate(tiles[left], tiles[right], op);
+    if (!result) return reset(index);
+    recordMove(left, right, op, result);
+  }
+  if (steps.length) {
+    message = tiles.length === 1 ? resultMessage(tiles[0]) : "已恢复上次进度。";
+  }
+  saveAttempt();
   render();
 }
 
-function openPuzzle(index) {
+function saveAttempt() {
   const url = new URL(location.href);
-  if (index === 0) url.searchParams.delete("puzzle");
-  else url.searchParams.set("puzzle", index + 1);
-  if (url.href !== location.href) {
-    try {
-      window.history.replaceState(window.history.state, "", url);
-    } catch {
-      // The cards still work in contexts that block URL updates.
-    }
+  if (puzzleIndex === 0) url.searchParams.delete("puzzle");
+  else url.searchParams.set("puzzle", puzzleIndex + 1);
+  const state = window.history.state;
+  if (!steps.length && !state?.fraction24 && url.href === location.href) return;
+  const attempt = steps.length ? {
+    deck: puzzles[puzzleIndex].join("-"),
+    moves: steps.map(({left, right, op}) => ({left, right, op}))
+  } : null;
+  try {
+    window.history.replaceState({...state, fraction24: attempt}, "", url);
+  } catch {
+    // The cards still work in contexts that block history updates.
   }
-  reset(index);
 }
 
 function undo(event) {
@@ -304,6 +327,7 @@ function undo(event) {
   selection = [];
   hintedOperator = null;
   message = "已撤销。重新选两张牌。";
+  saveAttempt();
   render();
   if (event.detail === 0 && history.length === 0) cardButtons[0].focus();
 }
@@ -361,9 +385,9 @@ function render() {
   $("hint").disabled = tiles.length === 1 && isGoal(tiles[0]);
   $("undo").disabled = history.length === 0;
   $("reset").disabled = history.length === 0 && selection.length === 0;
-  $("steps").replaceChildren(...steps.map(text => {
+  $("steps").replaceChildren(...steps.map(({expression}) => {
     const step = document.createElement("li");
-    step.textContent = text;
+    step.textContent = expression;
     return step;
   }));
 
@@ -408,11 +432,11 @@ puzzles.forEach((_, index) => {
   option.value = String(index);
   $("puzzle").append(option);
 });
-$("puzzle").addEventListener("change", event => openPuzzle(Number(event.target.value)));
+$("puzzle").addEventListener("change", event => reset(Number(event.target.value)));
 $("hint").addEventListener("click", hint);
 $("undo").addEventListener("click", undo);
 $("reset").addEventListener("click", () => reset(puzzleIndex));
-$("next").addEventListener("click", () => openPuzzle((puzzleIndex + 1) % puzzles.length));
+$("next").addEventListener("click", () => reset((puzzleIndex + 1) % puzzles.length));
 window.addEventListener("storage", event => {
   if (!progressStorage || event.storageArea !== progressStorage) return;
   if (event.key === null) solved.clear();
@@ -426,7 +450,11 @@ window.addEventListener("storage", event => {
 });
 const requestedPuzzle = Number(new URLSearchParams(location.search).get("puzzle"));
 const validPuzzle = Number.isInteger(requestedPuzzle) && requestedPuzzle >= 1 && requestedPuzzle <= puzzles.length;
-openPuzzle(validPuzzle ? requestedPuzzle - 1 : 0);
+const index = validPuzzle ? requestedPuzzle - 1 : 0;
+const attempt = window.history.state?.fraction24;
+const savedMoves = attempt?.deck === puzzles[index].join("-") && Array.isArray(attempt.moves)
+  && attempt.moves.length < puzzles[index].length ? attempt.moves : [];
+reset(index, savedMoves);
 renderProgress();
 </script>
 </body>
