@@ -324,7 +324,7 @@ function ShortestGallery({model, word, gallery, followingGallery, onStep, routeH
   </details>;
 }
 
-function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, update}) {
+function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, update, chartHref}) {
   const details = useRef(null);
   useEffect(() => {
     function followGrowthLink() {
@@ -375,11 +375,12 @@ function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, upd
     <div className="growth-axis" aria-hidden="true">
       <span>0</span><span>{cumulative ? "Gallery depth" : "Word length"}</span><span>{counts.length - 1}</span>
     </div>
+    <CopyLink key={chartHref} href={chartHref} kind="Chart" copiedMessage="Link copied. It opens this growth chart." />
     <p><a href="#growth">Compare growth across examples</a></p>
   </details>;
 }
 
-function Controls({model, view, count, countsByLength, neighbors, idealGallery, update, choose, changeModel, changeCoupling}) {
+function Controls({model, view, count, countsByLength, chartHref, neighbors, idealGallery, update, choose, changeModel, changeCoupling}) {
   const triangleOptions = [triangleSeries, triangleSeriesWithFour].find(series => series.includes(model));
   const idealGalleryHref = idealGallery ? viewUrl({...view, word: "", destination: idealGallery.word, zoom: 1,
     depth: Math.max(view.depth, idealGallery.word.length)}, model, new URL(location.pathname, location.href)).href : null;
@@ -460,7 +461,7 @@ function Controls({model, view, count, countsByLength, neighbors, idealGallery, 
       <p id="count">{count} {count === 1 ? "chamber" : "chambers"}
         {model.family === "Spherical" ? " in gallery" : " drawn"}</p>
       <GalleryGrowth counts={countsByLength} depth={view.depth} changeDepth={changeDepth} update={update}
-        cumulative={view.cumulativeGrowth} logarithmic={view.logarithmicGrowth} />
+        cumulative={view.cumulativeGrowth} logarithmic={view.logarithmicGrowth} chartHref={chartHref} />
       {model.rank === 3 && <>
         <label className="depth-label" htmlFor="zoom">Zoom <output>{view.zoom}×</output></label>
         <input id="zoom" type="range" min="1" max="4" step="0.25" value={view.zoom}
@@ -760,6 +761,7 @@ function App() {
   const destination = view.destination ?? view.word;
   const pageUrl = new URL(location.pathname, location.href);
   const viewHref = viewUrl(view, model, new URL(pageUrl)).href;
+  const chartHref = new URL("#growth-chart", viewHref).href;
   const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
     model, pageUrl).href : null;
   const graph = buildGallery(model);
@@ -819,7 +821,8 @@ function App() {
         <CopyLink key={viewHref} href={viewHref} kind="View" copiedMessage="Link copied. It opens at the current chamber." />
       </div>
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
-        idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling} changeModel={changeModel} />
+        chartHref={chartHref} idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling}
+        changeModel={changeModel} />
     </div>
     <Inspector model={model} coordinates={view.coordinates} chamber={chamber} />
     <Notes notesRef={notes} />
