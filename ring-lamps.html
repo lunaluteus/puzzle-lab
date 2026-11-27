@@ -390,8 +390,14 @@ function render(message = "", suggested = -1, parityGroup = 0) {
   setHistoryAction(redo, undonePresses.length > 0);
   reset.disabled = pressHistory.length === 0 && undonePresses.length === 0;
   hint.disabled = lights === 0;
-  const announcement = editing ? "逐盏设置亮灭，然后点「开始解题」。"
-    : lights === 0 ? `全关了！用了 ${pressHistory.length} 次。` : message;
+  let announcement = message;
+  if (editing) {
+    announcement = oddParityGroup(draft, windows)
+      ? "这个开局无解。开始解题后，点「提示」查看原因。"
+      : "这个开局可解。设置好亮灭后，点「开始解题」。";
+  } else if (lights === 0) {
+    announcement = `全关了！用了 ${pressHistory.length} 次。`;
+  }
   if (status.textContent !== announcement) status.textContent = announcement;
   const rule = ruleControl.value === "spaced"
     ? "点第 i 盏灯会翻转第 i、i+1、i+3 盏，编号绕回一圈。"
