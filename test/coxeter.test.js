@@ -3,7 +3,7 @@ import test from "node:test";
 import { coxeterMath } from "../scripts/coxeter-mathjax.js";
 import {
   affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, dihedralMetric, dihedralModels,
-  dihedralProductModels, exampleById, examples, idealVertexIndices, limitRays, presets,
+  dihedralProductModels, exampleById, examples, idealVertexGallery, idealVertexIndices, limitRays, presets,
   probeRankTwo, reflect, slice, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, vertexAngles, wallNames
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
@@ -359,6 +359,19 @@ test("the two-cusp series varies its interior angle and preserves the ideal endp
   assert.equal(exampleFormulae(exampleById.get("triangle-two-cusps-24")).area, "\\frac{23\\pi}{24}");
   assert.deepEqual(idealVertexIndices(exampleById.get("one-cusp")), [1]);
   assert.deepEqual(idealVertexIndices(exampleById.get("hurwitz")), []);
+});
+
+test("an ideal vertex gallery shares the same ideal ray at every step", () => {
+  for (const [id, vertex, word] of [["two-cusps", 0, "tututu"], ["one-cusp", 1, "sususu"], ["ideal", 0, "tututu"]]) {
+    const model = exampleById.get(id);
+    assert.deepEqual(idealVertexGallery(model), {vertex, word});
+    const {byWord} = buildGallery(model);
+    const ray = byWord.get("").rays[vertex];
+    for (let length = 1; length <= word.length; length++) {
+      assert.deepEqual(byWord.get(word.slice(0, length)).rays[vertex], ray);
+    }
+  }
+  assert.equal(idealVertexGallery(exampleById.get("hurwitz")), null);
 });
 
 test("finite dihedral products have 4m chambers and preserve preset links", () => {

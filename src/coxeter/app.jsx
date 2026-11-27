@@ -2,8 +2,9 @@ import React, { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useS
 import { createRoot } from "react-dom/client";
 import {
   affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels,
-  dihedralProductModels, exampleById, idealVertexIndices, infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder,
-  presets, probeRankTwo, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, wallNames
+  dihedralProductModels, exampleById, idealVertexGallery, idealVertexIndices, infiniteDihedralModels, limitRays,
+  maxDihedralOrder, maxTriangleOrder, presets, probeRankTwo, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries,
+  wallNames
 } from "./model.js";
 import { exampleFormulae, inspectorMath, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
@@ -259,7 +260,7 @@ function CopyRouteLink({href}) {
   </>;
 }
 
-function ShortestGallery({model, word, destination, followingGallery, onStep, routeHref}) {
+function ShortestGallery({model, word, destination, followingGallery, onStep, routeHref, idealGallery}) {
   const details = useRef(null);
   useEffect(() => {
     if (followingGallery && details.current) details.current.open = true;
@@ -281,6 +282,8 @@ function ShortestGallery({model, word, destination, followingGallery, onStep, ro
           same endpoint via different half-strips.</p>}
     </> : translation ? <p>Follow the two wall crossings from <var>C</var>. Together they translate the
       starting chamber two units {destination === "st" ? "left" : "right"}.</p>
+      : destination === idealGallery?.word ? <p>Cross walls <var>{destination[0]}</var> and <var>{destination[1]}</var> in turn.
+        Watch the ideal vertex where they meet stay in the same place.</p>
       : <p>Each letter crosses one wall.</p>}
     <CopyRouteLink key={routeHref} href={routeHref} />
   </details>;
@@ -343,6 +346,9 @@ function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, upd
 function Controls({model, view, count, countsByLength, neighbors, update, choose, changeModel, changeCoupling}) {
   const destination = view.destination ?? view.word;
   const triangleOptions = [triangleSeries, triangleSeriesWithFour].find(series => series.includes(model));
+  const idealGallery = idealVertexGallery(model);
+  const idealGalleryHref = idealGallery ? viewUrl({...view, word: "", destination: idealGallery.word, zoom: 1,
+    depth: Math.max(view.depth, idealGallery.word.length)}, model, new URL(location.pathname, location.href)).href : null;
   const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
     model, new URL(location.pathname, location.href)).href : null;
   const changeDepth = depth => update({
@@ -453,8 +459,9 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
         <a href="?model=a1-i2-infinity&amp;destination=st">Trace the st translation</a>
         {" · "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare su and us</a>
       </p>}
+      {idealGalleryHref && <p><a href={idealGalleryHref}>Trace a gallery around an ideal vertex</a></p>}
       <ShortestGallery model={model} word={view.word} destination={destination} followingGallery={Boolean(view.destination)}
-        onStep={word => update({word, destination})} routeHref={routeHref} />
+        onStep={word => update({word, destination})} routeHref={routeHref} idealGallery={idealGallery} />
       <p>{view.word.length === model.max && !["Finite line", "Finite dihedral", "Spherical"].includes(model.family)
         ? "Gallery limit reached. Cross back or select another chamber."
         : "Click a chamber, cross a wall, or focus the plot and use the generator keys."}</p>
@@ -636,6 +643,11 @@ function Notes({notesRef}) {
       <NoteFormula latex={mathNotes.twoCuspArea} />. The ∞ option gives the ideal triangle, with all three vertices on the circle.
       {" "}<a href="?model=triangle-two-cusps-2&amp;projection=poincare">Start at m = 2 in the Poincaré disk</a>.
       {" "}<a href="https://brice.loustau.eu/ressources/book.pdf#page=271">Loustau, §14.3</a>.</p>
+    <p>The walls adjacent to an ideal vertex both end at that point on the boundary circle. Reflections across those
+      walls fix the shared vertex.
+      {" "}<a href="?model=two-cusps&amp;destination=tututu&amp;projection=poincare">Follow six alternating wall crossings</a>
+      {" "}and watch the selected chamber move while one of its ideal vertices stays fixed.
+      {" "}<a href="https://brice.loustau.eu/ressources/book.pdf#page=266">Loustau, §14.1</a>.</p>
     <p>Disconnected diagrams give direct products. The rank-three products have the form
       <NoteFormula latex={mathNotes.product} />, where m can also be infinite.
       For the finite products, the selector varies the order m of st from 2 through {maxDihedralOrder}.

@@ -328,6 +328,13 @@ export function idealVertexIndices(example) {
   return vertexAngles(example).flatMap((angle, index) => angle === 0 ? [index] : []);
 }
 
+export function idealVertexGallery(example) {
+  const [vertex] = idealVertexIndices(example);
+  if (vertex === undefined) return null;
+  const walls = wallNames(example).filter((_, index) => index !== vertex);
+  return {vertex, word: walls.join("").repeat(3)};
+}
+
 export function limitRays(example) {
   if (example.rank !== 2) return null;
   const c = -example.gram[0][1];
