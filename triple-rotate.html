@@ -21,7 +21,7 @@
   header p { margin: 0 0 20px; color: var(--muted); }
   a { color: var(--muted); text-underline-offset: .18em; }
   button, select { font: inherit; color: inherit; touch-action: manipulation; }
-  a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid #9d5633; outline-offset: 3px; }
+  a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #9d5633; outline-offset: 3px; }
   button:disabled { opacity: .45; }
   button:not(:disabled) { cursor: pointer; }
   .controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
@@ -52,6 +52,9 @@
   #status { margin: 12px 0 0; min-height: 1.6em; }
   .actions { margin-top: 14px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
   .actions #new { background: var(--board); color: var(--paper); border-color: var(--board); }
+  #share-feedback { margin: 8px 0 0; color: var(--muted); }
+  #share-feedback:empty { margin: 0; }
+  #share-url { width: 100%; margin-top: 4px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; }
 </style>
 </head>
 <body>
@@ -83,7 +86,10 @@
     <button id="undo" type="button">撤销</button>
     <button id="redo" type="button">重做</button>
     <button id="reset" type="button">重来</button>
+    <button id="share" type="button">复制局面链接</button>
   </div>
+  <p id="share-feedback" role="status"></p>
+  <input id="share-url" type="url" readonly hidden aria-label="当前局面链接">
 </main>
 <script id="triple-rotate-rules">
 "use strict";
@@ -129,6 +135,9 @@ const sizeControl = $("size");
 const difficultyControl = $("difficulty");
 const tiles = $("tiles");
 const groups = $("groups");
+const shareFeedback = $("share-feedback");
+const shareUrl = $("share-url");
+let shareRevision = 0;
 let solver, board, initial, history, undone, first, proposed, message;
 let tileElements, groupButtons;
 
@@ -180,6 +189,10 @@ function install(size, requested = null) {
 
 function render() {
   const won = board === solver.goal;
+  shareRevision++;
+  shareFeedback.textContent = "";
+  shareUrl.hidden = true;
+  $("share").disabled = won;
   tileElements.forEach((tile, i) => {
     tile.textContent = board[i];
     tile.classList.toggle("selected", !won && i >= first && i < first + 3);
@@ -221,9 +234,14 @@ function readProgress(opening) {
   return {...progress, undone: redoHistory};
 }
 
-function saveProgress() {
+function puzzleUrl(opening) {
   const url = new URL(location.href);
-  url.searchParams.set("board", initial);
+  url.searchParams.set("board", opening);
+  return url;
+}
+
+function saveProgress() {
+  const url = puzzleUrl(initial);
   const state = window.history.state;
   const progress = history.length || undone.length ? {initial, board, first, history, undone} : null;
   if (!progress && !state?.tripleRotate && url.href === location.href) return;
@@ -232,6 +250,22 @@ function saveProgress() {
   } catch {
     // Play can continue when the browser blocks history updates.
   }
+}
+
+async function sharePuzzle() {
+  const revision = ++shareRevision;
+  const href = puzzleUrl(board).href;
+  let copied;
+  try {
+    await navigator.clipboard.writeText(href);
+    copied = true;
+  } catch {
+    copied = false;
+  }
+  if (revision !== shareRevision) return;
+  shareUrl.value = href;
+  shareUrl.hidden = copied;
+  shareFeedback.textContent = copied ? "链接已复制，打开后会从当前局面开始。" : "请选中下方链接并复制。";
 }
 
 function start(state, prompt = "选一组三格，再选轮转方向。", progress = null) {
@@ -290,6 +324,8 @@ $("reset").addEventListener("click", event => {
   start(initial);
   if (event.detail === 0) groupButtons[first].focus();
 });
+$("share").addEventListener("click", sharePuzzle);
+shareUrl.addEventListener("focus", () => shareUrl.select());
 $("new").addEventListener("click", () => {
   const difficulty = Number(difficultyControl.value);
   const choices = solver.states.filter(state => state !== solver.goal && state !== initial
