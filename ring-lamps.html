@@ -355,6 +355,12 @@ function setHistoryAction(button, available) {
   button.tabIndex = available ? 0 : -1;
 }
 
+function shortestPresses(mask) {
+  return ruleControl.value === "spaced"
+    ? optimalSpacedPresses(mask, windows)
+    : optimalPresses(mask, size, span);
+}
+
 function render(message = "", suggested = -1, parityGroup = 0) {
   shareRevision++;
   shareFeedback.textContent = "";
@@ -396,7 +402,10 @@ function render(message = "", suggested = -1, parityGroup = 0) {
       ? "这个开局无解。开始解题后，点「提示」查看原因。"
       : "这个开局可解。设置好亮灭后，点「开始解题」。";
   } else if (lights === 0) {
-    announcement = `全关了！用了 ${pressHistory.length} 次。`;
+    const minimum = countBits(shortestPresses(initial));
+    announcement = pressHistory.length === minimum
+      ? `全关了！用了 ${minimum} 次，达到了最少次数。`
+      : `全关了！用了 ${pressHistory.length} 次，这题最少 ${minimum} 次。`;
   } else if (parityGroup) {
     const labels = lamps.flatMap((_, i) => parityGroup & (1 << i) ? [i + 1] : []).join("、");
     const litInGroup = countBits(lights & parityGroup);
@@ -634,9 +643,7 @@ redo.addEventListener("click", () => {
   if (undonePresses.length > 0) playPress(undonePresses.pop(), "已重做一步。");
 });
 hint.addEventListener("click", event => {
-  const presses = ruleControl.value === "spaced"
-    ? optimalSpacedPresses(lights, windows)
-    : optimalPresses(lights, size, span);
+  const presses = shortestPresses(lights);
   if (presses === null) {
     render("", -1, oddParityGroup(lights, windows));
     return;
