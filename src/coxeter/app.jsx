@@ -12,6 +12,7 @@ import { decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamer
 import maths from "virtual:coxeter-math";
 
 const defaultId = "indefinite";
+const zoomRange = {min: 1, max: 4, step: 0.25};
 const orderLabel = order => order === Infinity ? "∞" : order;
 const families = [...new Set(presets.map(model => model.family))];
 const rotationKeys = new Map([
@@ -36,7 +37,11 @@ function readViewFromUrl() {
   const destination = target && byWord.has(target) ? target : null;
   const budgetDepth = Number.isInteger(budget) ? Math.min(budget, model.max) : model.depth;
   const depth = Math.max(word.length, destination?.length ?? 0, budgetDepth);
-  const zoom = Number(query.get("zoom"));
+  const requestedZoom = Number(query.get("zoom"));
+  let zoom = requestedZoom >= zoomRange.min && requestedZoom <= zoomRange.max ? requestedZoom : zoomRange.min;
+  if (model.rank === 3) {
+    zoom = zoomRange.min + Math.round((zoom - zoomRange.min) / zoomRange.step) * zoomRange.step;
+  }
   const camera = model.family === "Spherical" ? decodeSphereCamera(query.get("camera")) : null;
   const projection = model.family === "Hyperbolic" && query.get("projection") === "poincare" ? "poincare" : "klein";
   const coordinates = model.family === "Finite dihedral" && query.get("coordinates") === "euclidean" ? "euclidean" : "dual";
@@ -44,7 +49,7 @@ function readViewFromUrl() {
   const cumulativeGrowth = query.get("growth") === "cumulative";
   const logarithmicGrowth = query.get("growth-scale") === "log";
   return {
-    id: model.id, word, destination, depth, zoom: zoom >= 1 && zoom <= 4 ? zoom : 1,
+    id: model.id, word, destination, depth, zoom,
     camera, projection, coordinates, point, cumulativeGrowth, logarithmicGrowth
   };
 }
@@ -465,7 +470,7 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
         cumulative={view.cumulativeGrowth} logarithmic={view.logarithmicGrowth} chartHref={chartHref} />
       {model.rank === 3 && <>
         <label className="depth-label" htmlFor="zoom">Zoom <output>{view.zoom}×</output></label>
-        <input id="zoom" type="range" min="1" max="4" step="0.25" value={view.zoom}
+        <input id="zoom" type="range" {...zoomRange} value={view.zoom}
           onChange={event => update({zoom: Number(event.target.value)})} />
       </>}
       {model.family === "Hyperbolic" && <div className="projection-control">
