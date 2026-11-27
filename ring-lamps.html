@@ -49,9 +49,9 @@
   .meter { position: absolute; inset: 34%; display: grid; place-content: center; text-align: center; }
   .meter strong { font-size: clamp(32px, 9vw, 60px); line-height: 1.15; color: var(--accent); }
   .meter span { font-size: 14px; color: var(--muted); }
-  button, select { font: inherit; }
+  button, select, input { font: inherit; }
   button { cursor: pointer; }
-  header a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid #daf2a6; outline-offset: 4px; }
+  header a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #daf2a6; outline-offset: 4px; }
   .lamp {
     position: absolute;
     left: var(--x);
@@ -86,7 +86,7 @@
   .rules label { display: grid; gap: 4px; font-size: 14px; }
   .rules .rule-choice { grid-column: 1 / -1; }
   .rules [hidden], .actions[hidden] { display: none; }
-  select, .actions button {
+  select, .actions button, .share-url {
     border: 1px solid #555d4d;
     border-radius: 8px;
     padding: 7px 10px;
@@ -97,7 +97,11 @@
   .actions button:hover:enabled, select:hover { border-color: var(--accent); }
   .actions button:disabled { opacity: .45; cursor: default; }
   .actions .primary { background: #d8b561; color: #241c0b; border-color: #d8b561; font-weight: 650; }
-  .actions #clear-lights { grid-column: 1 / -1; }
+  .actions #clear-lights, .actions .share-control { grid-column: 1 / -1; }
+  .share-control button, .share-url { width: 100%; }
+  .share-feedback { color: var(--muted); font-size: .9rem; }
+  .share-feedback:not(:empty) { margin-top: 7px; }
+  .share-url { margin-top: 7px; }
   .status { min-height: 3.1em; color: var(--accent); }
   .notes { margin-top: 16px; }
   .notes a { color: var(--accent); text-underline-offset: .2em; }
@@ -136,6 +140,11 @@
         <button type="button" id="reset" disabled>重来</button>
         <button type="button" id="challenge">随机 21 灯挑战</button>
         <button type="button" id="edit">编辑开局</button>
+        <div class="share-control">
+          <button type="button" id="share">复制灯态链接</button>
+          <p class="share-feedback" id="share-feedback" role="status"></p>
+          <input class="share-url" id="share-url" aria-label="当前灯态链接" readonly hidden>
+        </div>
       </div>
       <div class="actions" id="edit-actions" hidden>
         <button type="button" class="primary" id="apply-edit">开始解题</button>
@@ -278,6 +287,8 @@ const moves = document.getElementById("moves");
 const playActions = document.getElementById("play-actions");
 const editActions = document.getElementById("edit-actions");
 const edit = document.getElementById("edit");
+const shareFeedback = document.getElementById("share-feedback");
+const shareUrl = document.getElementById("share-url");
 const initialPuzzle = [1, 3, 4, 5, 6, 8].reduce((mask, lamp) => mask | (1 << (lamp - 1)), 0);
 const challengePuzzle = [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 14]
   .reduce((mask, lamp) => mask | (1 << (lamp - 1)), 0);
@@ -292,6 +303,7 @@ let history = [];
 let lamps = [];
 let windows = [];
 let hoveredLamp = null;
+let shareRevision = 0;
 
 function fillSpanChoices(preferred) {
   const options = Array.from({ length: size }, (_, i) => {
@@ -313,6 +325,9 @@ function renderPreview() {
 }
 
 function render(message = "", suggested = -1, parityGroup = 0) {
+  shareRevision++;
+  shareFeedback.textContent = "";
+  shareUrl.hidden = true;
   const editing = draft !== null;
   const displayed = draft ?? lights;
   lamps.forEach((lamp, i) => {
@@ -343,18 +358,23 @@ function render(message = "", suggested = -1, parityGroup = 0) {
   renderPreview();
 }
 
-function start(mask, message = "") {
-  initial = lights = mask;
-  draft = null;
-  history = [];
+function puzzleUrl(mask) {
   const url = new URL(location.href);
   const rule = ruleControl.value;
   url.searchParams.set("size", size);
   url.searchParams.set("rule", rule);
   if (rule === "consecutive") url.searchParams.set("span", span);
   else url.searchParams.delete("span");
-  url.searchParams.set("lights", initial.toString(16));
+  url.searchParams.set("lights", mask.toString(16));
   url.searchParams.delete("challenge");
+  return url;
+}
+
+function start(mask, message = "") {
+  initial = lights = mask;
+  draft = null;
+  history = [];
+  const url = puzzleUrl(initial);
   if (url.href !== location.href) {
     try {
       window.history.replaceState(window.history.state, "", url);
@@ -363,6 +383,22 @@ function start(mask, message = "") {
     }
   }
   render(message);
+}
+
+async function sharePuzzle() {
+  const revision = ++shareRevision;
+  const href = puzzleUrl(lights).href;
+  let copied;
+  try {
+    await navigator.clipboard.writeText(href);
+    copied = true;
+  } catch {
+    copied = false;
+  }
+  if (revision !== shareRevision) return;
+  shareUrl.value = href;
+  shareUrl.hidden = copied;
+  shareFeedback.textContent = copied ? "链接已复制，打开后会从当前灯态开始。" : "请选中下方链接并复制。";
 }
 
 function toggleLamp(i) {
@@ -466,6 +502,8 @@ spanControl.addEventListener("change", () => {
 });
 document.getElementById("new").addEventListener("click", newPuzzle);
 document.getElementById("challenge").addEventListener("click", () => startChallenge(true));
+document.getElementById("share").addEventListener("click", sharePuzzle);
+shareUrl.addEventListener("focus", () => shareUrl.select());
 edit.addEventListener("click", () => {
   draft = initial;
   render();
