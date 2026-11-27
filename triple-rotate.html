@@ -164,7 +164,7 @@ function install(size, requested = null) {
   const sample = solver.goal[1] + solver.goal[0] + solver.goal.slice(2, -2)
     + solver.goal.at(-1) + solver.goal.at(-2);
   if (requested === null || (requested !== solver.goal && solver.hints.has(requested))) {
-    start(requested ?? sample);
+    start(requested ?? sample, undefined, readProgress(requested));
     return;
   }
 
@@ -207,21 +207,34 @@ function render() {
   $("status").textContent = won ? "排好了！用了 " + history.length + " 步。" : message;
 }
 
-function start(state, prompt = "选一组三格，再选轮转方向。") {
-  initial = board = state;
-  history = [];
-  first = 0;
-  proposed = null;
-  message = prompt;
+function readProgress(opening) {
+  const progress = window.history.state?.tripleRotate;
+  const validPosition = position => solver.hints.has(position?.board)
+    && Number.isInteger(position.first) && position.first >= 0 && position.first < groupButtons.length;
+  if (progress?.initial !== opening || !validPosition(progress) || !Array.isArray(progress.history)
+    || progress.history[0]?.board !== opening || !progress.history.every(validPosition)) return null;
+  return progress;
+}
+
+function saveProgress() {
   const url = new URL(location.href);
   url.searchParams.set("board", initial);
-  if (url.href !== location.href) {
-    try {
-      window.history.replaceState(window.history.state, "", url);
-    } catch {
-      // The game still works in contexts that block URL updates.
-    }
+  const state = window.history.state;
+  if (!history.length && !state?.tripleRotate && url.href === location.href) return;
+  const progress = history.length ? {initial, board, first, history} : null;
+  try {
+    window.history.replaceState({...state, tripleRotate: progress}, "", url);
+  } catch {
+    // Play can continue when the browser blocks history updates.
   }
+}
+
+function start(state, prompt = "选一组三格，再选轮转方向。", progress = null) {
+  initial = state;
+  ({board, history, first} = progress ?? {board: state, history: [], first: 0});
+  proposed = null;
+  message = progress ? "已恢复上次进度。" : prompt;
+  if (!progress) saveProgress();
   render();
 }
 
@@ -230,6 +243,7 @@ function play(direction) {
   board = rotate(board, first, direction);
   proposed = null;
   message = "已轮转第 " + (first + 1) + " 到 " + (first + 3) + " 格。";
+  saveProgress();
   render();
   if (board === solver.goal) $("new").focus();
 }
@@ -249,6 +263,7 @@ $("undo").addEventListener("click", event => {
   ({board, first} = history.pop());
   proposed = null;
   message = "已撤销一步。";
+  saveProgress();
   render();
   if (event.detail === 0 && history.length === 0) groupButtons[first].focus();
 });
