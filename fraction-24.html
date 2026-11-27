@@ -261,11 +261,7 @@ function apply(op) {
   if (selection.length !== 2) return;
   const [left, right] = selection;
   const result = calculate(tiles[left], tiles[right], op);
-  if (!result) {
-    message = "不能除以零。试试别的运算或换一张牌。";
-    render();
-    return;
-  }
+  if (!result) return;
   undone = [];
   finishMove(left, right, op, result);
   focusAfterMove();
@@ -422,8 +418,11 @@ function renderProgress() {
 
 function render() {
   const won = tiles.length === 1 && isGoal(tiles[0]);
+  const ready = selection.length === 2;
+  const [left, right] = selection;
+  const zeroDivisor = ready && tiles[right].n === 0;
   $("puzzle").value = String(puzzleIndex);
-  $("status").textContent = message;
+  $("status").textContent = zeroDivisor ? `${message}不能除以零。` : message;
   $("solution").hidden = !won;
   $("solution-expression").textContent = won ? `${tiles[0].expression} = 24` : "";
   $("hint").disabled = won;
@@ -460,14 +459,15 @@ function render() {
     button.setAttribute("aria-label", "第 " + (index + 1) + " 张牌，" + value(tile));
   });
 
-  const ready = selection.length === 2;
-  const [left, right] = selection;
   operatorButtons.forEach((button, op) => {
-    button.disabled = !ready;
+    const blocked = zeroDivisor && op === 3;
+    button.disabled = !ready || blocked;
     const recommended = op === hintedOperator;
     button.classList.toggle("hinted", recommended);
     if (ready) {
-      button.setAttribute("aria-description", (recommended ? "建议计算 " : "计算 ") + operationText(left, right, op));
+      const expression = operationText(left, right, op);
+      button.setAttribute("aria-description", blocked ? `${expression}，不能除以零。`
+        : (recommended ? "建议计算 " : "计算 ") + expression);
     } else button.removeAttribute("aria-description");
   });
 }
