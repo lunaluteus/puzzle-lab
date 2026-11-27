@@ -299,7 +299,7 @@ let span = 3;
 let initial = initialPuzzle;
 let lights = initial;
 let draft = null;
-let history = [];
+let pressHistory = [];
 let lamps = [];
 let windows = [];
 let hoveredLamp = null;
@@ -340,15 +340,15 @@ function render(message = "", suggested = -1, parityGroup = 0) {
     lamp.classList.toggle("parity", inGroup);
   });
   litCount.textContent = String(countBits(displayed));
-  moves.textContent = String(history.length);
+  moves.textContent = String(pressHistory.length);
   moves.parentElement.hidden = editing;
   playActions.hidden = editing;
   editActions.hidden = !editing;
   ruleControl.disabled = sizeControl.disabled = spanControl.disabled = editing;
-  undo.disabled = reset.disabled = history.length === 0;
+  undo.disabled = reset.disabled = pressHistory.length === 0;
   hint.disabled = lights === 0;
   const announcement = editing ? "逐盏设置亮灭，然后点「开始解题」。"
-    : lights === 0 ? `全关了！用了 ${history.length} 次。` : message;
+    : lights === 0 ? `全关了！用了 ${pressHistory.length} 次。` : message;
   if (status.textContent !== announcement) status.textContent = announcement;
   const rule = ruleControl.value === "spaced"
     ? "点第 i 盏灯会翻转第 i、i+1、i+3 盏，编号绕回一圈。"
@@ -370,19 +370,24 @@ function puzzleUrl(mask) {
   return url;
 }
 
-function start(mask, message = "") {
-  initial = lights = mask;
-  draft = null;
-  history = [];
+function saveProgress() {
   const url = puzzleUrl(initial);
-  if (url.href !== location.href) {
-    try {
-      window.history.replaceState(window.history.state, "", url);
-    } catch {
-      // The board still works in contexts that block URL updates.
-    }
+  try {
+    window.history.replaceState({
+      ...window.history.state, ringLamps: {opening: url.search, presses: pressHistory}
+    }, "", url);
+  } catch {
+    // The board still works in contexts that block history updates.
   }
-  render(message);
+}
+
+function start(mask, message = "", previousPresses = []) {
+  initial = mask;
+  pressHistory = previousPresses;
+  lights = pressHistory.reduce((state, lamp) => state ^ windows[lamp], initial);
+  draft = null;
+  saveProgress();
+  render(pressHistory.length ? "已恢复上次进度。" : message);
 }
 
 async function sharePuzzle() {
@@ -407,8 +412,9 @@ function toggleLamp(i) {
     render();
     return;
   }
-  history.push(lights);
+  pressHistory.push(i);
   lights ^= windows[i];
+  saveProgress();
   render();
 }
 
@@ -524,8 +530,9 @@ document.getElementById("apply-edit").addEventListener("click", () => {
 });
 reset.addEventListener("click", () => start(initial));
 undo.addEventListener("click", () => {
-  if (history.length === 0) return;
-  lights = history.pop();
+  if (pressHistory.length === 0) return;
+  lights ^= windows[pressHistory.pop()];
+  saveProgress();
   render("已撤销一步。");
 });
 hint.addEventListener("click", () => {
@@ -566,7 +573,11 @@ if (shared) {
   fillSpanChoices(shared.span);
   installBoard();
   const preset = size === 21 && shared.rule === "spaced" && shared.mask === challengePuzzle;
-  start(shared.mask, preset ? challengePrompt : "");
+  const saved = window.history.state?.ringLamps;
+  const previousPresses = saved?.opening === puzzleUrl(shared.mask).search && Array.isArray(saved.presses)
+    ? [...saved.presses] : [];
+  const valid = previousPresses.every(lamp => Number.isInteger(lamp) && lamp >= 0 && lamp < size);
+  start(shared.mask, preset ? challengePrompt : "", valid ? previousPresses : []);
 } else if (query.get("challenge") === "21") {
   startChallenge();
 } else {
