@@ -476,7 +476,8 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
       </>}
       {dihedralProductModels.includes(model) && <>
         <label className="depth-label" htmlFor="product-order">Order of st</label>
-        <select id="product-order" value={model.id} onChange={event => changeModel(event.target.value)}>
+        <select id="product-order" value={model.id}
+          onChange={event => changeModel(event.target.value, {preserveGallery: true})}>
           {dihedralProductModels.map(example => <option key={example.id} value={example.id}>
             {orderLabel(example.exponents[0][1])}
           </option>)}
