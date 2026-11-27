@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import {
   affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels,
   dihedralProductModels, exampleById, idealVertexGallery, idealVertexIndices, infiniteDihedralModels, limitRays,
-  maxDihedralOrder, maxTriangleOrder, presets, probeRankTwo, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries,
-  wallNames
+  maxDihedralOrder, maxTriangleOrder, oppositeSphericalChamber, presets, probeRankTwo, sphere, triangleSeries,
+  triangleSeriesWithFour, twoCuspSeries, wallNames
 } from "./model.js";
 import { exampleFormulae, inspectorMath, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
@@ -127,7 +127,7 @@ function PointProbe({model, point, euclidean, setPoint}) {
 }
 
 function Plot({model, chambers, word, zoom, camera, projection, coordinates, point, fixedIdealVertex,
-  setPoint, setCamera, choose, cross, neighbors}) {
+  setPoint, setCamera, choose, cross, neighbors, selectOpposite}) {
   const canvas = useRef(null);
   const pick = useRef(null);
   const drag = useRef(null);
@@ -250,6 +250,7 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
       {spherical && <span className="sphere-controls">
         Drag or use arrow keys to rotate.
         <button type="button" disabled={!camera} onClick={() => setCamera(null)}>Center on selection</button>
+        <button type="button" onClick={selectOpposite}>Select opposite chamber</button>
       </span>}
     </figcaption>
     {model.rank === 2 && <PointProbe model={model} point={point} euclidean={euclidean} setPoint={setPoint} />}
@@ -714,6 +715,9 @@ function Notes({notesRef}) {
       at lengths <var>n</var> and 15 − <var>n</var> match. The last bar counts the unique chamber at length 15.
       Set <var>t</var> = 1 in the polynomial to count all 120 chambers.
       {" "}<a href="https://homeweb.unifr.ch/kellerha/pub/YEUJC1817.pdf">Kellerhals and Perren, Table 1</a>.</p>
+    <p>On the sphere, each chamber at length <var>n</var> has an antipodal chamber at length 15 − <var>n</var> in H₃.
+      Use <strong>Select opposite chamber</strong> below the plot to see the pairing.
+      {" "}<a href="https://people.math.osu.edu/davis.12/second_edition.pdf">Davis, §4.6 and Lemma D.2.3</a>.</p>
     <h2>Coordinates and boundaries</h2>
     <p>Write <NoteFormula latex={mathNotes.coordinate} /> in the dual of the simple-root space.
       The fundamental chamber is <NoteFormula latex={mathNotes.chamber} />, and the Tits cone is <NoteFormula latex={mathNotes.cone} />.
@@ -766,6 +770,10 @@ function App() {
       ...current, word, depth: Math.max(current.depth, word.length),
       destination: steps.includes(word) || alternateSteps.includes(word) ? current.destination : null
     }));
+  };
+  const selectOpposite = () => {
+    choose(oppositeSphericalChamber(model, chamber).word);
+    update({camera: null});
   };
   const changeModel = (id, {preserveDepth = false} = {}) => {
     const next = exampleById.get(id);
@@ -825,7 +833,7 @@ function App() {
         <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
           camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
           fixedIdealVertex={fixedIdealVertex} setPoint={point => update({point})} setCamera={camera => update({camera})}
-          choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} />
+          choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} selectOpposite={selectOpposite} />
         <ShortestGallery model={model} word={view.word} gallery={{destination, steps, alternative, alternateSteps}}
           followingGallery={Boolean(view.destination)}
           onStep={word => update({word, destination})} routeHref={routeHref} idealGallery={idealGallery} />

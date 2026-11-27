@@ -3,7 +3,7 @@ import test from "node:test";
 import { coxeterMath } from "../scripts/coxeter-mathjax.js";
 import {
   affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, dihedralMetric, dihedralModels,
-  dihedralProductModels, exampleById, examples, idealVertexGallery, idealVertexIndices, limitRays, presets,
+  dihedralProductModels, exampleById, examples, idealVertexGallery, idealVertexIndices, limitRays, oppositeSphericalChamber, presets,
   probeRankTwo, reflect, slice, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, vertexAngles, wallNames
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
@@ -98,8 +98,14 @@ for (const model of examples) {
       const dot = (a, b) => a.reduce((sum, n, i) => sum + n * b[i], 0);
       const area = angles.reduce((a, b) => a + b, 0) - Math.PI;
       assert.ok(close(list.length * area, 4 * Math.PI));
-      for (const {rays} of list) {
-        const vertices = rays.map(project);
+      for (const chamber of list) {
+        const vertices = chamber.rays.map(project);
+        const opposite = oppositeSphericalChamber(model, chamber);
+        const oppositeVertices = opposite.rays.map(project);
+        assert.equal(chamber.word.length + opposite.word.length, model.max);
+        assert.equal(oppositeSphericalChamber(model, opposite), chamber);
+        assert.ok(vertices.every(vertex => oppositeVertices.some(other =>
+          vertex.every((coordinate, i) => close(coordinate, -other[i])))));
         for (const [i, a] of vertices.entries()) {
           assert.ok(close(Math.hypot(...a), 1));
           const tangent = b => b.map((x, k) => x - a[k] * dot(a, b));

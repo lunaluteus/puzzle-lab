@@ -259,6 +259,14 @@ export function buildGallery(example) {
   return gallery;
 }
 
+export function oppositeSphericalChamber(example, chamber) {
+  const {list, byWord} = buildGallery(example);
+  // The complete spherical gallery ends at the longest element.
+  let opposite = chamber;
+  for (const wall of list.at(-1).word) opposite = byWord.get(opposite.neighbors[wall]);
+  return opposite;
+}
+
 const dot = (a, b) => a.reduce((sum, value, i) => sum + value * b[i], 0);
 
 function eigenbasis(matrix) {
