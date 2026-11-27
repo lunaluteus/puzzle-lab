@@ -3,6 +3,7 @@ import { drawSphere } from "./spherical.js";
 
 const tau = 2 * Math.PI;
 const labelFont = "600 13px system-ui, sans-serif";
+export const nextChamberColor = "#b9abe5";
 const palette = {
   outside: "#14232d",
   interior: "#28444b",
@@ -11,6 +12,7 @@ const palette = {
   fundamental: "#3a8b87",
   current: "#eeb758",
   currentOnHome: "#79c5ad",
+  next: nextChamberColor,
   axis: "#9ab3b9",
   label: "#e2eeee",
   dark: "#14232d"
@@ -63,7 +65,7 @@ export function poincareCircle([ax, ay], [bx, by]) {
 
 export function drawPlot(plot, model, chambers, word, {
   zoom = 1, point = null, camera = null, projection = "klein", coordinates = "dual", fixedIdealVertex = null,
-  onWalls, onIdealVertices
+  nextChambers = [], onWalls, onIdealVertices
 } = {}) {
   const ctx = plot.getContext("2d");
   const {width, height} = plot.getBoundingClientRect();
@@ -81,7 +83,7 @@ export function drawPlot(plot, model, chambers, word, {
   ctx.fillStyle = palette.outside;
   ctx.fillRect(0, 0, width, height);
   if (model.family === "Spherical") {
-    const pickSphere = drawSphere(ctx, view, model, chambers, word, palette, camera);
+    const pickSphere = drawSphere(ctx, view, model, chambers, word, palette, camera, nextChambers);
     return (x, y) => ({word: pickSphere(x, y)});
   }
   const affineProduct = model === affineDihedralProduct;
@@ -91,6 +93,12 @@ export function drawPlot(plot, model, chambers, word, {
   const metric = model.family === "Finite dihedral" && coordinates === "euclidean" ? dihedralMetric(model) : null;
   const fans = metric ? chambers.map(chamber => ({...chamber, rays: chamber.rays.map(metric.forward)})) : chambers;
   const limit = limitRays(model);
+  function chamberFill(label) {
+    if (label === word) return word ? palette.current : palette.currentOnHome;
+    if (nextChambers.includes(label)) return palette.next;
+    return label === "" ? palette.fundamental : "rgba(68, 135, 137, .32)";
+  }
+
   function pathFan(start, sweep) {
     ctx.beginPath();
     ctx.moveTo(view.x, view.y);
@@ -143,8 +151,7 @@ export function drawPlot(plot, model, chambers, word, {
     function paintStrip({left, right, above, sOnLeft, word: chamberWord}) {
       const a = place(left), b = place(right), edge = above ? 0 : height;
       const selected = chamberWord === word;
-      ctx.fillStyle = selected ? (word ? palette.current : palette.currentOnHome)
-        : chamberWord === "" ? palette.fundamental : "rgba(68, 135, 137, .32)";
+      ctx.fillStyle = chamberFill(chamberWord);
       ctx.fillRect(a, Math.min(edge, view.y), step, Math.abs(edge - view.y));
       const color = selected ? "#f8d18a" : palette.line;
       const stroke = selected ? 1.6 : .8;
@@ -200,6 +207,7 @@ export function drawPlot(plot, model, chambers, word, {
       const direction = Math.sign(chamber.rays[0][0]);
       const end = x + direction * extent;
       const color = chamber.word === word ? palette.current
+        : nextChambers.includes(chamber.word) ? palette.next
         : chamber.word === "" ? palette.fundamental : palette.line;
       line([x, y], [end, y], color, 5);
       ctx.beginPath();
@@ -243,15 +251,15 @@ export function drawPlot(plot, model, chambers, word, {
     const {start, sweep} = fanAngles(chamber.rays);
     pathFan(start, sweep);
     const selected = chamber.word === word;
-    ctx.fillStyle = selected ? (word ? palette.current : palette.currentOnHome)
-      : chamber.word === "" ? palette.fundamental : "rgba(68, 135, 137, .32)";
+    ctx.fillStyle = chamberFill(chamber.word);
     ctx.fill();
     ctx.strokeStyle = selected ? "#f8d18a" : palette.line;
     ctx.lineWidth = selected ? 1.6 : 0.8;
     ctx.stroke();
     if (sweep > .17) {
       const labelAt = rayEnd(start + sweep / 2, .36 * Math.min(view.width, view.height));
-      text(chamber.word || "C", ...labelAt, selected ? palette.dark : palette.label);
+      const labelColor = selected || nextChambers.includes(chamber.word) ? palette.dark : palette.label;
+      text(chamber.word || "C", ...labelAt, labelColor);
     }
   }
 
@@ -351,8 +359,7 @@ export function drawPlot(plot, model, chambers, word, {
       });
     } else points.slice(1).forEach(point => ctx.lineTo(...point));
     ctx.closePath();
-    ctx.fillStyle = selected ? (word ? palette.current : palette.currentOnHome)
-      : chamber.word === "" ? palette.fundamental : "rgba(68, 135, 137, .32)";
+    ctx.fillStyle = chamberFill(chamber.word);
     ctx.fill();
     ctx.strokeStyle = selected ? "#f8d18a" : palette.line;
     ctx.lineWidth = selected ? 1.6 : .8;

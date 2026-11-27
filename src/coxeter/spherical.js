@@ -74,7 +74,7 @@ function contains(point, vertices) {
   });
 }
 
-export function drawSphere(ctx, view, model, chambers, word, palette, basis) {
+export function drawSphere(ctx, view, model, chambers, word, palette, basis, nextChambers = []) {
   const project = sphere(model);
   const focus = chambers.find(chamber => chamber.word === word);
   const camera = basis ?? sphereCamera(focus.rays.map(project));
@@ -102,6 +102,7 @@ export function drawSphere(ctx, view, model, chambers, word, palette, basis) {
     ctx.closePath();
     const selected = label === word;
     ctx.fillStyle = selected ? (word ? palette.current : palette.currentOnHome)
+      : nextChambers.includes(label) ? palette.next
       : label === "" ? palette.fundamental : "rgba(68, 135, 137, .32)";
     ctx.fill();
     ctx.strokeStyle = selected ? "#f8d18a" : palette.line;

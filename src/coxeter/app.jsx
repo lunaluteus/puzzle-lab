@@ -7,7 +7,7 @@ import {
   triangleSeriesWithFour, twoCuspSeries, wallNames
 } from "./model.js";
 import { exampleFormulae, inspectorMath, mathNotes } from "./formulas.js";
-import { drawPlot } from "./plot.js";
+import { drawPlot, nextChamberColor } from "./plot.js";
 import { decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "./spherical.js";
 import maths from "virtual:coxeter-math";
 
@@ -145,7 +145,7 @@ function PointProbe({model, point, euclidean, setPoint}) {
 }
 
 function Plot({model, chambers, word, zoom, camera, projection, coordinates, point, fixedIdealVertex,
-  setPoint, setCamera, choose, cross, neighbors, selectOpposite}) {
+  shortestCrossings, setPoint, setCamera, choose, cross, neighbors, selectOpposite}) {
   const canvas = useRef(null);
   const pick = useRef(null);
   const drag = useRef(null);
@@ -160,9 +160,10 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
   const plotCamera = previewCamera ?? camera;
 
   useLayoutEffect(() => {
+    const nextChambers = shortestCrossings.map(crossing => crossing.word);
     const redraw = () => {
       pick.current = drawPlot(canvas.current, model, chambers, word, {
-        zoom, point, camera: plotCamera, projection, coordinates, fixedIdealVertex,
+        zoom, point, camera: plotCamera, projection, coordinates, fixedIdealVertex, nextChambers,
         onWalls: affineProduct ? setPlotWalls : undefined,
         onIdealVertices: hasIdealVertices ? setIdealVertices : undefined
       });
@@ -171,7 +172,8 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
     const observer = new ResizeObserver(redraw);
     observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates, fixedIdealVertex, affineProduct, hasIdealVertices]);
+  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates, fixedIdealVertex,
+    shortestCrossings, affineProduct, hasIdealVertices]);
 
   const centeredCamera = () => sphereCamera(chambers.find(chamber => chamber.word === word).rays.map(sphere(model)));
 
@@ -263,6 +265,9 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
     <figcaption>
       <span><i className="fundamental" /> Fundamental chamber</span>
       <span><i className="selected" /> Selected chamber</span>
+      {shortestCrossings.length > 0 && <span>
+        <i style={{backgroundColor: nextChamberColor, borderColor: nextChamberColor}} /> Next chamber on a shortest route
+      </span>}
       {(model.family === "Hyperbolic" || limitRays(model)) &&
         <span id="limit-key"><i className="limit" /> {model.family === "Hyperbolic" ? "Circle at infinity" : "Limit rays"}</span>}
       {hasIdealVertices && <span><i className="ideal-corner" /> Selected ideal vertices</span>}
@@ -444,14 +449,9 @@ function GalleryGrowth({counts, depth, chamberLength, changeDepth, cumulative, l
   </details>;
 }
 
-function Controls({model, view, count, countsByLength, chartHref, neighbors, routeCounts, idealGallery,
+function Controls({model, view, count, countsByLength, chartHref, neighbors, shortestCrossings, idealGallery,
   update, choose, changeModel, changeCoupling}) {
   const walls = wallNames(model);
-  const shortestCrossings = walls.flatMap(wall => {
-    const next = neighbors[wall];
-    const routes = next?.length === view.word.length + 1 ? routeCounts?.get(next) : 0;
-    return routes ? [wall + " (" + routes + ")"] : [];
-  });
   const triangleOptions = [triangleSeries, triangleSeriesWithFour].find(series => series.includes(model));
   const idealGalleryHref = idealGallery ? viewUrl({...view, word: "", destination: idealGallery.word, alternateWord: null, zoom: 1,
     depth: Math.max(view.depth, idealGallery.word.length)}, model, new URL(location.pathname, location.href)).href : null;
@@ -563,7 +563,9 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, rou
           disabled={neighbors[wall] === undefined}
           onClick={() => choose(neighbors[wall])}>Cross {wall}</button>)}
       </div>
-      {shortestCrossings.length > 0 && <p id="shortest-crossings">Shortest continuations via {shortestCrossings.join(", ")}.</p>}
+      {shortestCrossings.length > 0 && <p id="shortest-crossings">
+        Shortest continuations via {shortestCrossings.map(({wall, count}) => wall + " (" + count + ")").join(", ")}.
+      </p>}
       <div className="tools"><button type="button" id="home" aria-disabled={!view.word} tabIndex={view.word ? 0 : -1}
         onClick={() => { if (view.word) choose(""); }}>Home chamber</button></div>
       {model === affineDihedralProduct && <p>
@@ -847,6 +849,10 @@ function App() {
     [graph, view.depth]);
   const chamber = graph.byWord.get(view.word);
   const {neighbors} = chamber;
+  const shortestCrossings = useMemo(() => Object.entries(neighbors).flatMap(([wall, word]) => {
+    const count = word.length === view.word.length + 1 ? routeCounts?.get(word) : 0;
+    return count ? [{wall, word, count}] : [];
+  }), [neighbors, routeCounts, view.word.length]);
   const update = patch => setView(current => ({...current, ...patch}));
   const choose = word => {
     if (word === undefined) return;
@@ -929,7 +935,8 @@ function App() {
       <div className="plot-column">
         <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
           camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
-          fixedIdealVertex={fixedIdealVertex} setPoint={point => update({point})} setCamera={camera => update({camera})}
+          fixedIdealVertex={fixedIdealVertex} shortestCrossings={shortestCrossings}
+          setPoint={point => update({point})} setCamera={camera => update({camera})}
           choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} selectOpposite={selectOpposite} />
         <ShortestGallery model={model} word={view.word}
           gallery={{destination, steps, alternative, alternatives, alternateSteps, routeCount}}
@@ -938,8 +945,8 @@ function App() {
         <CopyLink key={viewHref} href={viewHref} kind="View" copiedMessage="Link copied. It opens at the current chamber." />
       </div>
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
-        chartHref={chartHref} routeCounts={routeCounts} idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling}
-        changeModel={changeModel} />
+        chartHref={chartHref} shortestCrossings={shortestCrossings} idealGallery={idealGallery}
+        update={update} choose={choose} changeCoupling={changeCoupling} changeModel={changeModel} />
     </div>
     <Inspector model={model} coordinates={view.coordinates} chamber={chamber} />
     <Notes notesRef={notes} />
