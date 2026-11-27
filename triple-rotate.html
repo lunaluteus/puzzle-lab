@@ -47,6 +47,8 @@
   .groups button[aria-pressed="true"], .rotate .hinted { background: var(--active); border-color: var(--active); color: var(--ink); }
   .table button:focus-visible { outline-color: #f9dca4; }
   .rotate { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .rotate button { display: grid; place-content: center; padding: 6px; }
+  .rotation-preview { font-size: .875rem; font-variant-numeric: tabular-nums; word-spacing: .2em; }
   #status { margin: 12px 0 0; min-height: 1.6em; }
   .actions { margin-top: 14px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
   .actions #new { background: var(--board); color: var(--paper); border-color: var(--board); }
@@ -69,8 +71,8 @@
     <div class="tiles" id="tiles" role="list" aria-label="当前数字顺序"></div>
     <div class="groups" id="groups" role="group" aria-label="选择哪三格"></div>
     <div class="rotate">
-      <button id="left" type="button">向左轮转</button>
-      <button id="right" type="button">向右轮转</button>
+      <button id="left" type="button">向左轮转<span class="rotation-preview" aria-hidden="true"></span></button>
+      <button id="right" type="button">向右轮转<span class="rotation-preview" aria-hidden="true"></span></button>
     </div>
     <p id="status" role="status"></p>
   </section>
@@ -177,8 +179,18 @@ function render() {
     button.disabled = won;
   });
   for (const direction of Object.keys(directions)) {
-    $(direction).disabled = won;
-    $(direction).classList.toggle("hinted", direction === proposed);
+    const button = $(direction);
+    const preview = button.querySelector(".rotation-preview");
+    button.disabled = won;
+    button.classList.toggle("hinted", direction === proposed);
+    preview.hidden = won;
+    if (won) {
+      button.removeAttribute("aria-description");
+    } else {
+      const result = [...rotate(board, first, direction).slice(first, first + 3)];
+      preview.textContent = `→ ${result.join(" ")}`;
+      button.setAttribute("aria-description", `第 ${first + 1} 到 ${first + 3} 格变为 ${result.join("、")}`);
+    }
   }
   $("moves").textContent = history.length;
   $("hint").disabled = won;
