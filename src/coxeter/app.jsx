@@ -463,7 +463,8 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
       </>}
       {twoCuspSeries.includes(model) && <>
         <label className="depth-label" htmlFor="cusp-order">Order m in (m, ∞, ∞)</label>
-        <select id="cusp-order" value={model.id} onChange={event => changeModel(event.target.value)}>
+        <select id="cusp-order" value={model.id}
+          onChange={event => changeModel(event.target.value, {preserveGallery: true})}>
           {twoCuspSeries.map(example => <option key={example.id} value={example.id}>
             {orderLabel(example.exponents[0][1])}
           </option>)}
