@@ -117,6 +117,7 @@
   <div class="actions">
     <button id="hint" type="button">提示一步</button>
     <button id="undo" type="button">撤销</button>
+    <button id="redo" type="button">重做</button>
     <button id="reset" type="button">重来</button>
     <button id="next" type="button">下一题</button>
   </div>
@@ -215,7 +216,7 @@ try {
 }
 const prompt = "选两张牌开始。减法和除法按选择顺序算。";
 let puzzleIndex = 0;
-let tiles, selection, history, steps, hintedOperator, message;
+let tiles, selection, history, steps, undone, hintedOperator, message;
 
 function operationText(left, right, op) {
   return `${value(tiles[left])} ${signs[op]} ${value(tiles[right])}`;
@@ -265,6 +266,12 @@ function apply(op) {
     render();
     return;
   }
+  undone = [];
+  finishMove(left, right, op, result);
+  focusAfterMove();
+}
+
+function finishMove(left, right, op, result) {
   const expression = recordMove(left, right, op, result);
   selection = [];
   hintedOperator = null;
@@ -280,30 +287,48 @@ function apply(op) {
   message = resultMessage(result, expression);
   saveAttempt();
   render();
+}
+
+function focusAfterMove() {
   if (tiles.length > 1) {
     cardButtons[0].focus();
   } else {
-    $(isGoal(result) ? "next" : "undo").focus();
+    $(isGoal(tiles[0]) ? "next" : "undo").focus();
   }
 }
 
-function reset(index, savedMoves = []) {
+function replayMoves(moves) {
+  for (const move of moves) {
+    const {left, right, op} = move ?? {};
+    if (!Number.isInteger(left) || !Number.isInteger(right) || !Number.isInteger(op)
+      || left === right || !tiles[left] || !tiles[right] || !signs[op]) return false;
+    const result = calculate(tiles[left], tiles[right], op);
+    if (!result) return false;
+    recordMove(left, right, op, result);
+  }
+  return true;
+}
+
+function reset(index, savedMoves = [], savedUndone = []) {
   puzzleIndex = index;
   tiles = puzzles[index].map((rank, i) => ({ n: rank, d: 1, suit: i }));
   selection = [];
   history = [];
   steps = [];
+  undone = [];
   hintedOperator = null;
   message = prompt;
-  for (const move of savedMoves) {
-    const {left, right, op} = move ?? {};
-    if (!Number.isInteger(left) || !Number.isInteger(right) || !Number.isInteger(op)
-      || left === right || !tiles[left] || !tiles[right] || !signs[op]) return reset(index);
-    const result = calculate(tiles[left], tiles[right], op);
-    if (!result) return reset(index);
-    recordMove(left, right, op, result);
+  if (!replayMoves(savedMoves)) return reset(index);
+  if (savedUndone.length) {
+    // Validate future moves in play order, then return to the saved position.
+    const currentTiles = tiles;
+    const validRedo = replayMoves([...savedUndone].reverse());
+    const futureSteps = steps.splice(savedMoves.length);
+    history.length = savedMoves.length;
+    tiles = currentTiles;
+    if (validRedo) undone = futureSteps.reverse();
   }
-  if (steps.length) {
+  if (steps.length || undone.length) {
     message = tiles.length === 1 ? resultMessage(tiles[0]) : "已恢复上次进度。";
   }
   saveAttempt();
@@ -315,10 +340,12 @@ function saveAttempt() {
   if (puzzleIndex === 0) url.searchParams.delete("puzzle");
   else url.searchParams.set("puzzle", puzzleIndex + 1);
   const state = window.history.state;
-  if (!steps.length && !state?.fraction24 && url.href === location.href) return;
-  const attempt = steps.length ? {
+  if (!steps.length && !undone.length && !state?.fraction24 && url.href === location.href) return;
+  const moveData = ({left, right, op}) => ({left, right, op});
+  const attempt = steps.length || undone.length ? {
     deck: puzzles[puzzleIndex].join("-"),
-    moves: steps.map(({left, right, op}) => ({left, right, op}))
+    moves: steps.map(moveData),
+    undone: undone.map(moveData)
   } : null;
   try {
     window.history.replaceState({...state, fraction24: attempt}, "", url);
@@ -330,13 +357,20 @@ function saveAttempt() {
 function undo(event) {
   if (history.length === 0) return;
   tiles = history.pop();
-  steps.pop();
+  undone.push(steps.pop());
   selection = [];
   hintedOperator = null;
   message = "已撤销。重新选两张牌。";
   saveAttempt();
   render();
   if (event.detail === 0 && history.length === 0) cardButtons[0].focus();
+}
+
+function redo() {
+  if (!undone.length) return;
+  const {left, right, op} = undone.pop();
+  finishMove(left, right, op, calculate(tiles[left], tiles[right], op));
+  if (!undone.length) focusAfterMove();
 }
 
 function hint(event) {
@@ -394,7 +428,8 @@ function render() {
   $("solution-expression").textContent = won ? `${tiles[0].expression} = 24` : "";
   $("hint").disabled = won;
   $("undo").disabled = history.length === 0;
-  $("reset").disabled = history.length === 0 && selection.length === 0;
+  $("redo").disabled = undone.length === 0;
+  $("reset").disabled = history.length === 0 && undone.length === 0 && selection.length === 0;
   $("steps").replaceChildren(...steps.map(({expression}) => {
     const step = document.createElement("li");
     step.textContent = expression;
@@ -445,6 +480,7 @@ puzzles.forEach((_, index) => {
 $("puzzle").addEventListener("change", event => reset(Number(event.target.value)));
 $("hint").addEventListener("click", hint);
 $("undo").addEventListener("click", undo);
+$("redo").addEventListener("click", redo);
 $("reset").addEventListener("click", () => reset(puzzleIndex));
 $("next").addEventListener("click", () => reset((puzzleIndex + 1) % puzzles.length));
 window.addEventListener("storage", event => {
@@ -462,9 +498,12 @@ const requestedPuzzle = Number(new URLSearchParams(location.search).get("puzzle"
 const validPuzzle = Number.isInteger(requestedPuzzle) && requestedPuzzle >= 1 && requestedPuzzle <= puzzles.length;
 const index = validPuzzle ? requestedPuzzle - 1 : 0;
 const attempt = window.history.state?.fraction24;
-const savedMoves = attempt?.deck === puzzles[index].join("-") && Array.isArray(attempt.moves)
-  && attempt.moves.length < puzzles[index].length ? attempt.moves : [];
-reset(index, savedMoves);
+const validAttempt = attempt?.deck === puzzles[index].join("-") && Array.isArray(attempt.moves)
+  && attempt.moves.length < puzzles[index].length;
+const savedMoves = validAttempt ? attempt.moves : [];
+const savedUndone = validAttempt && Array.isArray(attempt.undone)
+  && savedMoves.length + attempt.undone.length < puzzles[index].length ? attempt.undone : [];
+reset(index, savedMoves, savedUndone);
 renderProgress();
 </script>
 </body>
