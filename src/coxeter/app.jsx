@@ -396,7 +396,7 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
     depth: Math.max(view.depth, idealGallery.word.length)}, model, new URL(location.pathname, location.href)).href : null;
   const changeDepth = depth => update({
     depth,
-    word: view.word.length <= depth ? view.word : "",
+    word: view.word.slice(0, depth),
     destination: view.destination?.length <= depth ? view.destination : null
   });
   return <aside aria-label="Chamber controls">
