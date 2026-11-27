@@ -6,8 +6,8 @@ import { runInNewContext } from "node:vm";
 const page = readFileSync(new URL("../triple-rotate.html", import.meta.url), "utf8");
 const rules = page.match(/<script id="triple-rotate-rules">([\s\S]+?)<\/script>/);
 assert.ok(rules, "The standalone page must include its rotation rules");
-const {rotate, solverFor} = runInNewContext(
-  rules[1] + "\n({rotate, solverFor})", {}, {filename: "triple-rotate.html"}
+const {rotate, solverFor, inversionCount} = runInNewContext(
+  rules[1] + "\n({rotate, solverFor, inversionCount})", {}, {filename: "triple-rotate.html"}
 );
 
 test("Triple Rotate moves exactly three consecutive cards in the chosen direction", () => {
@@ -16,15 +16,12 @@ test("Triple Rotate moves exactly three consecutive cards in the chosen directio
   assert.equal(rotate(rotate("123456", 1, "left"), 1, "right"), "123456");
 });
 
-function inversionCount(state) {
-  let count = 0;
-  for (let left = 0; left < state.length; left++) {
-    for (let right = left + 1; right < state.length; right++) {
-      if (state[left] > state[right]) count++;
-    }
-  }
-  return count;
-}
+test("Triple Rotate counts inversions in ordered, reachable, and unreachable boards", () => {
+  assert.equal(inversionCount("12345"), 0);
+  assert.equal(inversionCount("21354"), 2);
+  assert.equal(inversionCount("32145"), 3);
+  assert.equal(inversionCount("87654321"), 28);
+});
 
 for (const [size, count, diameter] of [[5, 60, 5], [6, 360, 7], [7, 2520, 10], [8, 20160, 14]]) {
   test("Triple Rotate gives shortest hints for every reachable " + size + "-card board", () => {
