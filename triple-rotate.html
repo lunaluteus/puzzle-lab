@@ -215,21 +215,26 @@ function play(direction) {
 
 $("left").addEventListener("click", () => play("left"));
 $("right").addEventListener("click", () => play("right"));
-$("hint").addEventListener("click", () => {
+$("hint").addEventListener("click", event => {
   const option = solver.hints.get(board);
   first = option.first;
   proposed = option.direction;
   message = "最少还要 " + option.remaining + " 步。把第 " + (first + 1) + " 到 " + (first + 3)
     + " 格 " + directions[proposed] + " 轮转。";
   render();
+  if (event.detail === 0) $(proposed).focus();
 });
-$("undo").addEventListener("click", () => {
+$("undo").addEventListener("click", event => {
   ({board, first} = history.pop());
   proposed = null;
   message = "已撤销一步。";
   render();
+  if (event.detail === 0 && history.length === 0) groupButtons[first].focus();
 });
-$("reset").addEventListener("click", () => start(initial));
+$("reset").addEventListener("click", event => {
+  start(initial);
+  if (event.detail === 0) groupButtons[first].focus();
+});
 $("new").addEventListener("click", () => {
   const difficulty = Number(difficultyControl.value);
   const choices = solver.states.filter(state => state !== solver.goal && state !== initial
