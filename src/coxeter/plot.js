@@ -84,7 +84,8 @@ export function drawPlot(plot, model, chambers, word, {
   }
   const affineProduct = model === affineDihedralProduct;
   const project = model.rank === 3 && !affineProduct ? slice(model).project : null;
-  const poincare = model.family === "Hyperbolic" && projection === "poincare";
+  const hyperbolic = model.family === "Hyperbolic";
+  const poincare = hyperbolic && projection === "poincare";
   const metric = model.family === "Finite dihedral" && coordinates === "euclidean" ? dihedralMetric(model) : null;
   const fans = metric ? chambers.map(chamber => ({...chamber, rays: chamber.rays.map(metric.forward)})) : chambers;
   const limit = limitRays(model);
@@ -374,6 +375,7 @@ export function drawPlot(plot, model, chambers, word, {
     paintTriangle(chambers.find(chamber => chamber.word === word));
   }
 
+  const idealMarkers = [];
   function paintDisk() {
     ctx.beginPath();
     ctx.arc(view.x, view.y, view.radius, 0, tau);
@@ -396,6 +398,9 @@ export function drawPlot(plot, model, chambers, word, {
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, tau);
         ctx.fill();
+        if (x + radius >= 0 && x - radius <= width && y + radius >= 0 && y - radius <= height) {
+          idealMarkers.push({x, y, word: chamber.word});
+        }
       }
     }
     for (const chamber of chambers) {
@@ -430,8 +435,19 @@ export function drawPlot(plot, model, chambers, word, {
 
   if (model.rank === 2) return (x, y) => pickFan(x - view.x, y - view.y);
   return (x, y) => {
+    let closestMarker;
+    let closestDistance = Infinity;
+    for (const marker of idealMarkers) {
+      const distance = Math.hypot(x - marker.x, y - marker.y);
+      const alreadySelected = marker.word === word && Math.abs(distance - closestDistance) <= 1e-6;
+      if (distance <= 6 && (distance < closestDistance - 1e-6 || alreadySelected)) {
+        closestMarker = marker;
+        closestDistance = distance;
+      }
+    }
+    if (closestMarker) return {word: closestMarker.word === word ? null : closestMarker.word};
     const point = [(x - view.x) / view.radius, (y - view.y) / view.radius];
-    if (poincare && Math.hypot(...point) > 1 + 1e-12) return {word: null};
+    if (hyperbolic && Math.hypot(...point) > 1 + 1e-12) return {word: null};
     const klein = poincare ? toKlein(point) : point;
     return {word: chambers.find(chamber => containsTriangle(klein, triangle(chamber)))?.word ?? null};
   };

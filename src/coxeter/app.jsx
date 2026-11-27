@@ -551,7 +551,7 @@ function Inspector({model, coordinates, chamber}) {
         <p>Intrinsic corner angles <Formula latex={angles} />, in wall-pair order{" "}
           <var>t–u</var>, <var>u–s</var>, <var>s–t</var>.</p>
         {idealCount > 0 && <p>The selected chamber has {idealCount} ideal {idealCount === 1 ? "vertex" : "vertices"}
-          {" "}on the boundary circle, with angle zero.</p>}
+          {" "}on the boundary circle, with angle zero. Select a boundary dot to jump to a chamber at that vertex.</p>}
         <p>Angle sum <Formula latex={angleSum} label="Triangle angle sum" />.</p>
         {model.family === "Hyperbolic" &&
           <p>Hyperbolic area <Formula latex={area} /> at curvature −1.</p>}
