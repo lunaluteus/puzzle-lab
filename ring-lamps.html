@@ -344,10 +344,12 @@ function render(message = "", suggested = -1, parityGroup = 0) {
   lamps.forEach((lamp, i) => {
     const on = Boolean(displayed & (1 << i));
     const inGroup = Boolean(parityGroup & (1 << i));
+    const recommended = i === suggested;
+    const description = editing ? "只切换这一盏灯" : lamp.dataset.playDescription;
     lamp.setAttribute("aria-label", `${i + 1} 号灯${inGroup ? "，奇偶性检查组" : ""}`);
-    lamp.setAttribute("aria-description", editing ? "只切换这一盏灯" : lamp.dataset.playDescription);
+    lamp.setAttribute("aria-description", recommended ? `建议按这盏灯。${description}` : description);
     lamp.setAttribute("aria-pressed", String(on));
-    lamp.classList.toggle("hint", i === suggested);
+    lamp.classList.toggle("hint", recommended);
     lamp.classList.toggle("parity", inGroup);
   });
   litCount.textContent = String(countBits(displayed));
@@ -587,7 +589,7 @@ undo.addEventListener("click", () => {
 redo.addEventListener("click", () => {
   if (undonePresses.length > 0) playPress(undonePresses.pop(), "已重做一步。");
 });
-hint.addEventListener("click", () => {
+hint.addEventListener("click", event => {
   const presses = ruleControl.value === "spaced"
     ? optimalSpacedPresses(lights, windows)
     : optimalPresses(lights, size, span);
@@ -600,6 +602,7 @@ hint.addEventListener("click", () => {
   if (presses === 0) return;
   const next = firstBit(presses);
   render(`最少还要 ${countBits(presses)} 次。可以先点 ${next + 1} 号灯。`, next);
+  if (event.detail === 0) lamps[next].focus();
 });
 
 function sharedPuzzle(query) {
