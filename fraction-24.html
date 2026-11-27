@@ -51,7 +51,7 @@
     padding: clamp(12px, 4vw, 28px);
     color: var(--paper);
   }
-  .cards { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: clamp(6px, 2vw, 14px); }
+  .cards { display: grid; grid-template-columns: repeat(var(--card-count, 4), minmax(0, 1fr)); gap: clamp(6px, 2vw, 14px); }
   .card {
     position: relative;
     background: var(--paper);
@@ -60,7 +60,8 @@
     min-width: 0;
     min-height: 90px;
     height: clamp(90px, 24vw, 144px);
-    place-content: center;
+    grid-template-columns: minmax(0, 1fr);
+    place-items: center;
     padding: 6px 2px;
     border: 2px solid transparent;
     border-radius: 11px;
@@ -68,6 +69,8 @@
     font-variant-numeric: tabular-nums;
   }
   .card[hidden] { display: none; }
+  .card:disabled { width: min(100%, 16rem); justify-self: center; opacity: 1; }
+  .card .rank { max-width: 100%; overflow-wrap: anywhere; }
   .card:not(:disabled):hover { background: #fffdf5; }
   .card[aria-pressed="true"] { border-color: #e6b66e; background: #fff1cf; }
   .card .suit, .card .order { position: absolute; top: 7px; font: 700 .85rem/1 system-ui, sans-serif; }
@@ -444,6 +447,7 @@ function render() {
     return step;
   }));
 
+  $("cards").style.setProperty("--card-count", tiles.length);
   cardButtons.forEach((button, index) => {
     const tile = tiles[index];
     button.hidden = !tile;
@@ -455,6 +459,7 @@ function render() {
     if (!tile) return;
 
     const rank = document.createElement("span");
+    rank.className = "rank";
     rank.textContent = value(tile);
     const suit = document.createElement("span");
     suit.className = tile.suit % 2 === 1 ? "suit red" : "suit";
