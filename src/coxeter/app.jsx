@@ -505,8 +505,8 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
           disabled={neighbors[wall] === undefined}
           onClick={() => choose(neighbors[wall])}>Cross {wall}</button>)}
       </div>
-      <div className="tools"><button type="button" id="home" disabled={!view.word}
-        onClick={() => choose("")}>Home chamber</button></div>
+      <div className="tools"><button type="button" id="home" aria-disabled={!view.word} tabIndex={view.word ? 0 : -1}
+        onClick={() => { if (view.word) choose(""); }}>Home chamber</button></div>
       {model === affineDihedralProduct && <p>
         <a href="?model=a1-i2-infinity&amp;destination=st">Trace the st translation</a>
         {" · "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare su and us</a>
