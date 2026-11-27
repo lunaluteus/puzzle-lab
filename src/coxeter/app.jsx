@@ -626,9 +626,14 @@ function Notes({notesRef}) {
         triangles and triangles with ideal vertices. An ∞ label gives an ideal vertex with angle zero.
         {" "}<a href="?model=one-cusp">Try (2, 3, ∞)</a>.</li>
     </ul>
-    <p>The <NoteFormula latex={mathNotes.triangleSeries} /> series passes from spherical to Euclidean at m = 6
-      and to hyperbolic at m = 7. The order selector runs from 3 through {maxTriangleOrder}, with ∞ for the ideal corner.
-      {" "}<a href="?model=b3">Start at m = 4 and change the third order</a>.</p>
+    <p>For a triangle with geodesic sides, Gauss–Bonnet gives
+      {" "}<NoteFormula latex={mathNotes.triangleCurvature} />, where <var>K</var> is the constant curvature
+      and <var>A</var> is its positive area. The sign of the angle excess is therefore the sign of the curvature.</p>
+    <p>In the <NoteFormula latex={mathNotes.triangleSeries} /> series, the first two angles use up 90° + 60°,
+      leaving 30° for a flat triangle. The third angle is 180°/<var>m</var>. Compare it with 30° before
+      opening the <a href="?model=h3&amp;depth=0">m = 5</a>, <a href="?model=affine-g2&amp;depth=0">m = 6</a>,
+      and <a href="?model=hurwitz&amp;depth=0&amp;projection=poincare">m = 7</a> chambers.
+      The order selector runs from 3 through {maxTriangleOrder}, with ∞ for the ideal corner.</p>
     <p>In the <NoteFormula latex={mathNotes.triangleSeriesWithFour} /> series, m = 4 gives the Euclidean
       right isosceles triangle. From m = 5 through {maxTriangleOrder} the selector shows compact
       hyperbolic triangles. At m = ∞, one corner is ideal.

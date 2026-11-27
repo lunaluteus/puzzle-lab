@@ -89,6 +89,7 @@ export const mathNotes = {
   triangleOrders: tex`(p,q,r)=(m_{st},m_{tu},m_{us})`,
   reciprocalSum: tex`\frac{1}{p}+\frac{1}{q}+\frac{1}{r}`,
   reciprocalInfinity: tex`1/\infty=0`,
+  triangleCurvature: tex`\alpha+\beta+\gamma-\pi=KA`,
   triangleSeries: tex`(2,3,m)`,
   triangleSeriesWithFour: tex`(2,4,m)`,
   twoCuspSeries: tex`(m,\infty,\infty)`,
