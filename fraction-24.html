@@ -292,7 +292,7 @@ function openPuzzle(index) {
   reset(index);
 }
 
-function undo() {
+function undo(event) {
   if (history.length === 0) return;
   tiles = history.pop();
   steps.pop();
@@ -300,21 +300,29 @@ function undo() {
   hintedOperator = null;
   message = "已撤销。重新选两张牌。";
   render();
+  if (event.detail === 0 && history.length === 0) cardButtons[0].focus();
 }
 
-function hint() {
+function hint(event) {
   const move = suggestion(tiles);
+  if (move === true) return;
+  let focusTarget;
   if (!move) {
     const count = undoCountToSolution(history);
     message = "当前牌面无法凑成 24。";
-    if (count !== null) message += "撤销 " + count + " 步可回到有解的牌面。";
+    if (count !== null) {
+      message += "撤销 " + count + " 步可回到有解的牌面。";
+      focusTarget = $("undo");
+    }
   } else {
     const { left, right, op } = move;
     selection = [left, right];
     hintedOperator = op;
     message = "试试 " + value(tiles[left]) + " " + signs[op] + " " + value(tiles[right]) + "。";
+    focusTarget = operatorButtons[op];
   }
   render();
+  if (event.detail === 0) focusTarget?.focus();
 }
 
 function addButton(parent, className, click) {
@@ -378,7 +386,12 @@ function render() {
 
   operatorButtons.forEach((button, op) => {
     button.disabled = selection.length !== 2;
-    button.classList.toggle("hinted", op === hintedOperator);
+    const recommended = op === hintedOperator;
+    button.classList.toggle("hinted", recommended);
+    if (recommended) {
+      const [left, right] = selection;
+      button.setAttribute("aria-description", `建议计算 ${value(tiles[left])} ${signs[op]} ${value(tiles[right])}`);
+    } else button.removeAttribute("aria-description");
   });
 }
 
