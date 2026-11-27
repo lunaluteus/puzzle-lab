@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   affineDihedralProduct, affineProductStrip, alternateReducedWords, buildGallery, couplingLabel, dihedralMetric, dihedralModels,
   dihedralProductModels, exampleById, idealVertexGallery, idealVertexIndices, infiniteDihedralModels, limitRays,
-  maxDihedralOrder, maxTriangleOrder, oppositeSphericalChamber, presets, probeRankTwo, sphere, triangleSeries,
+  maxDihedralOrder, maxTriangleOrder, oppositeSphericalChamber, presets, probeRankTwo, shortestRouteCountsTo, sphere, triangleSeries,
   triangleSeriesWithFour, twoCuspSeries, wallNames
 } from "./model.js";
 import { exampleFormulae, inspectorMath, mathNotes } from "./formulas.js";
@@ -444,7 +444,14 @@ function GalleryGrowth({counts, depth, chamberLength, changeDepth, cumulative, l
   </details>;
 }
 
-function Controls({model, view, count, countsByLength, chartHref, neighbors, idealGallery, update, choose, changeModel, changeCoupling}) {
+function Controls({model, view, count, countsByLength, chartHref, neighbors, routeCounts, idealGallery,
+  update, choose, changeModel, changeCoupling}) {
+  const walls = wallNames(model);
+  const shortestCrossings = walls.flatMap(wall => {
+    const next = neighbors[wall];
+    const routes = next?.length === view.word.length + 1 ? routeCounts?.get(next) : 0;
+    return routes ? [wall + " (" + routes + ")"] : [];
+  });
   const triangleOptions = [triangleSeries, triangleSeriesWithFour].find(series => series.includes(model));
   const idealGalleryHref = idealGallery ? viewUrl({...view, word: "", destination: idealGallery.word, alternateWord: null, zoom: 1,
     depth: Math.max(view.depth, idealGallery.word.length)}, model, new URL(location.pathname, location.href)).href : null;
@@ -552,10 +559,11 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
       </div>
       <p>Coxeter length {view.word.length}</p>
       <div className="walls" aria-label="Cross a wall">
-        {wallNames(model).map(wall => <button type="button" key={wall} data-wall={wall}
+        {walls.map(wall => <button type="button" key={wall} data-wall={wall}
           disabled={neighbors[wall] === undefined}
           onClick={() => choose(neighbors[wall])}>Cross {wall}</button>)}
       </div>
+      {shortestCrossings.length > 0 && <p id="shortest-crossings">Shortest continuations via {shortestCrossings.join(", ")}.</p>}
       <div className="tools"><button type="button" id="home" aria-disabled={!view.word} tabIndex={view.word ? 0 : -1}
         onClick={() => { if (view.word) choose(""); }}>Home chamber</button></div>
       {model === affineDihedralProduct && <p>
@@ -829,6 +837,8 @@ function App() {
     model, pageUrl).href : null;
   const graph = buildGallery(model);
   const routeCount = graph.byWord.get(destination).shortestRouteCount;
+  const routeCounts = useMemo(() => view.destination ? shortestRouteCountsTo(view.destination, graph.byWord) : null,
+    [graph, view.destination]);
   const alternatives = useMemo(() => [...alternateReducedWords(destination, model)], [destination, model]);
   const alternative = alternatives.find(route => route.word === view.alternateWord) ?? alternatives[0];
   const steps = gallerySteps(destination, graph.byWord);
@@ -841,7 +851,7 @@ function App() {
   const choose = word => {
     if (word === undefined) return;
     const onShownRoute = steps.includes(word) || alternateSteps.includes(word);
-    const nextAlternate = view.destination && !onShownRoute
+    const nextAlternate = !onShownRoute && routeCounts?.has(word)
       ? findAlternateThrough(alternatives, graph.byWord, word, view.word) : null;
     setView(current => ({
       ...current, word, depth: Math.max(current.depth, word.length),
@@ -928,7 +938,7 @@ function App() {
         <CopyLink key={viewHref} href={viewHref} kind="View" copiedMessage="Link copied. It opens at the current chamber." />
       </div>
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
-        chartHref={chartHref} idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling}
+        chartHref={chartHref} routeCounts={routeCounts} idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling}
         changeModel={changeModel} />
     </div>
     <Inspector model={model} coordinates={view.coordinates} chamber={chamber} />

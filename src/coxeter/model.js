@@ -275,6 +275,17 @@ export function buildGallery(example) {
   return gallery;
 }
 
+export function shortestRouteCountsTo(destination, byWord) {
+  const counts = new Map([[destination, 1]]);
+  // Visit chambers in descending length so each count is complete before passing it inward.
+  for (const [word, count] of counts) {
+    for (const neighbor of Object.values(byWord.get(word).neighbors)) {
+      if (neighbor.length < word.length) counts.set(neighbor, (counts.get(neighbor) ?? 0) + count);
+    }
+  }
+  return counts;
+}
+
 export function oppositeSphericalChamber(example, chamber) {
   const {list, byWord} = buildGallery(example);
   // The complete spherical gallery ends at the longest element.

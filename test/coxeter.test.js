@@ -4,7 +4,8 @@ import { coxeterMath } from "../scripts/coxeter-mathjax.js";
 import {
   affineDihedralProduct, affineProductStrip, alternateReducedWords, braidMoves, buildGallery, dihedralMetric, dihedralModels,
   dihedralProductModels, exampleById, examples, idealVertexGallery, idealVertexIndices, limitRays, oppositeSphericalChamber, presets,
-  probeRankTwo, reflect, slice, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, vertexAngles, wallNames
+  probeRankTwo, reflect, shortestRouteCountsTo, slice, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries,
+  vertexAngles, wallNames
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { drawPlot, poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
@@ -38,11 +39,20 @@ test("shortest gallery counts agree with the complete set of braid-equivalent wo
       const routes = [word, ...Array.from(alternateReducedWords(word, model), route => route.word)];
       assert.equal(routes.length, shortestRouteCount, id + " " + word);
       assert.equal(new Set(routes).size, routes.length);
+      const routesThrough = new Map([["", routes.length]]);
       for (const route of routes) {
         assert.equal(route.length, word.length);
         let chamber = "";
-        for (const wall of route) chamber = byWord.get(chamber).neighbors[wall];
+        for (const wall of route) {
+          chamber = byWord.get(chamber).neighbors[wall];
+          routesThrough.set(chamber, (routesThrough.get(chamber) ?? 0) + 1);
+        }
         assert.equal(chamber, word, id + " " + route);
+      }
+      const continuations = shortestRouteCountsTo(word, byWord);
+      assert.equal(continuations.size, routesThrough.size);
+      for (const [chamber, count] of continuations) {
+        assert.equal(count * byWord.get(chamber).shortestRouteCount, routesThrough.get(chamber), id + " " + word + " via " + chamber);
       }
     }
   }
