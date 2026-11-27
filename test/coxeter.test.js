@@ -4,7 +4,7 @@ import { coxeterMath } from "../scripts/coxeter-mathjax.js";
 import {
   affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, dihedralMetric, dihedralModels,
   dihedralProductModels, exampleById, examples, limitRays, presets,
-  probeRankTwo, reflect, slice, sphere, triangleSeries, triangleSeriesWithFour, vertexAngles, wallNames
+  probeRankTwo, reflect, slice, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, vertexAngles, wallNames
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
 import { poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
@@ -312,6 +312,21 @@ test("the (2, 4, m) series includes affine, compact and one-cusp triangles", () 
   assert.equal(exampleFormulae(exampleById.get("triangle-24-24")).area, "\\frac{5\\pi}{24}");
 });
 
+test("the two-cusp series varies its interior angle and preserves the ideal endpoint", () => {
+  assert.deepEqual(twoCuspSeries.map(model => model.exponents[0][1]),
+    [...Array.from({length: 23}, (_, i) => i + 2), Infinity]);
+  assert.equal(twoCuspSeries[1].id, "two-cusps");
+  assert.equal(twoCuspSeries.at(-1).id, "ideal");
+  for (const model of twoCuspSeries) {
+    const m = model.exponents[0][1];
+    assert.deepEqual(model.exponents, [[1, m, Infinity], [m, 1, Infinity], [Infinity, Infinity, 1]]);
+    assert.deepEqual(vertexAngles(model), [0, 0, Math.PI / m]);
+    assert.equal(exampleById.get(model.id), model);
+  }
+  assert.equal(exampleFormulae(twoCuspSeries[0]).area, "\\frac{\\pi}{2}");
+  assert.equal(exampleFormulae(exampleById.get("triangle-two-cusps-24")).area, "\\frac{23\\pi}{24}");
+});
+
 test("finite dihedral products have 4m chambers and preserve preset links", () => {
   assert.deepEqual(dihedralProductModels.map(model => model.exponents[0][1]),
     [...Array.from({length: 23}, (_, index) => index + 2), Infinity]);
@@ -408,7 +423,7 @@ test("the MathJax modules contain every formula and resolve their shared glyphs"
     return JSON.parse(source.slice(prefix.length));
   };
   const ids = ["virtual:coxeter-extra-math", "virtual:coxeter-triangle-math", "virtual:coxeter-triangle-24-math",
-    "virtual:coxeter-product-math", "virtual:coxeter-notes-math"];
+    "virtual:coxeter-two-cusp-math", "virtual:coxeter-product-math", "virtual:coxeter-notes-math"];
   const [{formulas, glyphs, deferred}, ...catalogs] = await Promise.all(
     ["virtual:coxeter-math", ...ids].map(readModule)
   );
@@ -417,9 +432,10 @@ test("the MathJax modules contain every formula and resolve their shared glyphs"
   const initial = new Set([...Object.values(inspectorMath), ...collect(presets)]);
   const sources = [
     examples.filter(model => !triangleSeries.includes(model) && !triangleSeriesWithFour.includes(model) &&
-      !dihedralProductModels.includes(model)),
+      !twoCuspSeries.includes(model) && !dihedralProductModels.includes(model)),
     triangleSeries,
     triangleSeriesWithFour,
+    twoCuspSeries,
     dihedralProductModels
   ].map(models => new Set(collect(models)));
   sources.push(new Set(Object.values(mathNotes)));

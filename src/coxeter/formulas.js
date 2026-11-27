@@ -91,6 +91,8 @@ export const mathNotes = {
   reciprocalInfinity: tex`1/\infty=0`,
   triangleSeries: tex`(2,3,m)`,
   triangleSeriesWithFour: tex`(2,4,m)`,
+  twoCuspSeries: tex`(m,\infty,\infty)`,
+  twoCuspArea: tex`\pi\left(1-\frac{1}{m}\right)`,
   product: tex`A_1\times I_2(m)`,
   affineProductReflections: tex`s:x_s\mapsto -x_s,\quad t:x_s\mapsto 2-x_s`,
   affineProductTranslations: tex`st:x_s\mapsto x_s-2,\quad ts:x_s\mapsto x_s+2`,

@@ -137,6 +137,14 @@ function rightTriangleSeries(q) {
 }
 export const triangleSeries = rightTriangleSeries(3);
 export const triangleSeriesWithFour = rightTriangleSeries(4);
+const cuspPresets = presets.filter(example => example.rank === 3 &&
+  example.exponents[0][2] === Infinity && example.exponents[1][2] === Infinity);
+export const twoCuspSeries = [...Array.from({length: maxTriangleOrder - 1}, (_, index) => {
+  const m = index + 2;
+  return cuspPresets.find(example => example.exponents[0][1] === m) ??
+    triangle("triangle-two-cusps-" + m, "Triangle · (" + m + ", ∞, ∞)", "Hyperbolic", [m, Infinity, Infinity],
+      "Two ideal vertices and one interior vertex with angle π/" + m + ".");
+}), cuspPresets.find(example => example.exponents[0][1] === Infinity)];
 const productPresets = presets.filter(example =>
   example.rank === 3 && example.exponents[0][2] === 2 && example.exponents[1][2] === 2);
 const finiteProducts = Array.from({length: maxDihedralOrder - 1}, (_, index) => {
@@ -147,6 +155,7 @@ const finiteProducts = Array.from({length: maxDihedralOrder - 1}, (_, index) => 
 export const dihedralProductModels = [...finiteProducts, affineDihedralProduct];
 export const examples = [...presets, ...moreDihedralModels,
   ...infiniteDihedralModels.filter(example => !infinitePresets.includes(example)), ...moreTriangleModels,
+  ...twoCuspSeries.filter(example => !cuspPresets.includes(example)),
   ...dihedralProductModels.filter(example => !productPresets.includes(example))];
 export const dihedralModels = examples.filter(example => example.family === "Finite dihedral");
 export const exampleById = new Map(examples.map(example => [example.id, example]));

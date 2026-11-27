@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels,
   dihedralProductModels, exampleById, infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder,
-  presets, probeRankTwo, sphere, triangleSeries, triangleSeriesWithFour, wallNames
+  presets, probeRankTwo, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, wallNames
 } from "./model.js";
 import { exampleFormulae, inspectorMath, mathNotes } from "./formulas.js";
 import { drawPlot } from "./plot.js";
@@ -396,6 +396,14 @@ function Controls({model, view, count, countsByLength, neighbors, update, choose
           </option>)}
         </select>
       </>}
+      {twoCuspSeries.includes(model) && <>
+        <label className="depth-label" htmlFor="cusp-order">Order m in (m, ∞, ∞)</label>
+        <select id="cusp-order" value={model.id} onChange={event => changeModel(event.target.value)}>
+          {twoCuspSeries.map(example => <option key={example.id} value={example.id}>
+            {orderLabel(example.exponents[0][1])}
+          </option>)}
+        </select>
+      </>}
       {dihedralProductModels.includes(model) && <>
         <label className="depth-label" htmlFor="product-order">Order of st</label>
         <select id="product-order" value={model.id} onChange={event => changeModel(event.target.value)}>
@@ -486,6 +494,7 @@ const catalogImports = {
   "virtual:coxeter-extra-math": () => import("virtual:coxeter-extra-math"),
   "virtual:coxeter-triangle-math": () => import("virtual:coxeter-triangle-math"),
   "virtual:coxeter-triangle-24-math": () => import("virtual:coxeter-triangle-24-math"),
+  "virtual:coxeter-two-cusp-math": () => import("virtual:coxeter-two-cusp-math"),
   "virtual:coxeter-notes-math": () => import("virtual:coxeter-notes-math"),
   "virtual:coxeter-product-math": () => import("virtual:coxeter-product-math")
 };
@@ -617,6 +626,11 @@ function Notes({notesRef}) {
       {" "}<a href="?model=affine-c2">Start at m = 4</a>{" or "}<a href="?model=triangle-24-infinity">jump to the ideal corner</a>.</p>
     <p>Use <strong>Right triangle series</strong> to compare the two series at the same m.
       At m = 4, this takes you between the spherical B₃ chamber and the Euclidean C̃₂ chamber.</p>
+    <p>In the <NoteFormula latex={mathNotes.twoCuspSeries} /> series, two vertices stay ideal as m varies
+      from 2 through {maxTriangleOrder}. The remaining angle is π/m, so the hyperbolic area at curvature −1 is
+      <NoteFormula latex={mathNotes.twoCuspArea} />. The ∞ option gives the ideal triangle, with all three vertices on the circle.
+      {" "}<a href="?model=triangle-two-cusps-2&amp;projection=poincare">Start at m = 2 in the Poincaré disk</a>.
+      {" "}<a href="https://brice.loustau.eu/ressources/book.pdf#page=271">Loustau, §14.3</a>.</p>
     <p>Disconnected diagrams give direct products. The rank-three products have the form
       <NoteFormula latex={mathNotes.product} />, where m can also be infinite.
       For the finite products, the selector varies the order m of st from 2 through {maxDihedralOrder}.
