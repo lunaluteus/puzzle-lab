@@ -242,7 +242,7 @@ function GallerySteps({route, byWord, word, label, onStep}) {
   </>;
 }
 
-function CopyRouteLink({href}) {
+function CopyLink({href, kind, copiedMessage}) {
   const [status, setStatus] = useState("");
   async function copy() {
     try {
@@ -254,11 +254,11 @@ function CopyRouteLink({href}) {
   }
   return <>
     <div className="tools">
-      <button type="button" onClick={copy}>Copy route link</button>
-      <span role="status">{status === "copied" ? "Link copied. The route opens at C."
+      <button type="button" onClick={copy}>Copy {kind.toLowerCase()} link</button>
+      <span role="status">{status === "copied" ? copiedMessage
         : status === "manual" ? "Select and copy the URL below." : ""}</span>
     </div>
-    {status === "manual" && <input className="route-link" aria-label="Route URL" readOnly value={href}
+    {status === "manual" && <input className="share-link" aria-label={kind + " URL"} readOnly value={href}
       onFocus={event => event.currentTarget.select()} />}
   </>;
 }
@@ -288,7 +288,7 @@ function ShortestGallery({model, word, destination, followingGallery, onStep, ro
       : followingGallery && destination === idealGallery?.word ? <p>Cross walls <var>{destination[0]}</var> and <var>{destination[1]}</var> in turn.
         Watch the ringed ideal vertex stay in the same place.</p>
       : <p>Each letter crosses one wall.</p>}
-    <CopyRouteLink key={routeHref} href={routeHref} />
+    <CopyLink key={routeHref} href={routeHref} kind="Route" copiedMessage="Link copied. The route opens at C." />
   </details>;
 }
 
@@ -715,8 +715,10 @@ function App() {
   const fixedIdealVertex = view.destination === idealGallery?.word && idealGallery.word.startsWith(view.word)
     ? idealGallery.vertex : null;
   const destination = view.destination ?? view.word;
+  const pageUrl = new URL(location.pathname, location.href);
+  const viewHref = viewUrl(view, model, new URL(pageUrl)).href;
   const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
-    model, new URL(location.pathname, location.href)).href : null;
+    model, pageUrl).href : null;
   const graph = buildGallery(model);
   const chambers = useMemo(() => graph.list.filter(chamber => chamber.word.length <= view.depth),
     [graph, view.depth]);
@@ -759,6 +761,7 @@ function App() {
           choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} />
         <ShortestGallery model={model} word={view.word} destination={destination} followingGallery={Boolean(view.destination)}
           onStep={word => update({word, destination})} routeHref={routeHref} idealGallery={idealGallery} />
+        <CopyLink key={viewHref} href={viewHref} kind="View" copiedMessage="Link copied. It opens at the current chamber." />
       </div>
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
         idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling}
