@@ -226,6 +226,12 @@ function GallerySteps({route, byWord, word, label, onStep}) {
   for (const wall of route) steps.push(byWord.get(steps.at(-1)).neighbors[wall]);
   const current = steps.indexOf(word);
   return <>
+    <div className="tools" role="group" aria-label={label + " navigation"}>
+      <button type="button" disabled={current <= 0} onClick={() => onStep(steps[current - 1])}>Previous</button>
+      <button type="button" disabled={current === steps.length - 1} onClick={() => onStep(steps[current + 1])}>
+        {current < 0 ? "Start route" : "Next"}
+      </button>
+    </div>
     <ol className="gallery-steps" role="list" aria-label={label}>
       {steps.map((step, i) => <li key={step}>
         <button type="button" aria-current={step === word ? "step" : undefined}
@@ -233,12 +239,6 @@ function GallerySteps({route, byWord, word, label, onStep}) {
           onClick={() => onStep(step)}>{route[i - 1] ?? "C"}</button>
       </li>)}
     </ol>
-    <div className="tools" role="group" aria-label={label + " navigation"}>
-      <button type="button" disabled={current <= 0} onClick={() => onStep(steps[current - 1])}>Previous</button>
-      <button type="button" disabled={current === steps.length - 1} onClick={() => onStep(steps[current + 1])}>
-        {current < 0 ? "Start route" : "Next"}
-      </button>
-    </div>
   </>;
 }
 
@@ -347,12 +347,9 @@ function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, upd
 }
 
 function Controls({model, view, count, countsByLength, neighbors, idealGallery, update, choose, changeModel, changeCoupling}) {
-  const destination = view.destination ?? view.word;
   const triangleOptions = [triangleSeries, triangleSeriesWithFour].find(series => series.includes(model));
   const idealGalleryHref = idealGallery ? viewUrl({...view, word: "", destination: idealGallery.word, zoom: 1,
     depth: Math.max(view.depth, idealGallery.word.length)}, model, new URL(location.pathname, location.href)).href : null;
-  const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
-    model, new URL(location.pathname, location.href)).href : null;
   const changeDepth = depth => update({
     depth,
     word: view.word.length <= depth ? view.word : "",
@@ -462,8 +459,6 @@ function Controls({model, view, count, countsByLength, neighbors, idealGallery, 
         {" · "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare su and us</a>
       </p>}
       {idealGalleryHref && <p><a href={idealGalleryHref}>Trace a gallery around an ideal vertex</a></p>}
-      <ShortestGallery model={model} word={view.word} destination={destination} followingGallery={Boolean(view.destination)}
-        onStep={word => update({word, destination})} routeHref={routeHref} idealGallery={idealGallery} />
       <p>{view.word.length === model.max && !["Finite line", "Finite dihedral", "Spherical"].includes(model.family)
         ? "Gallery limit reached. Cross back or select another chamber."
         : "Click a chamber, cross a wall, or focus the plot and use the generator keys."}</p>
@@ -719,6 +714,9 @@ function App() {
   const idealGallery = idealVertexGallery(model);
   const fixedIdealVertex = view.destination === idealGallery?.word && idealGallery.word.startsWith(view.word)
     ? idealGallery.vertex : null;
+  const destination = view.destination ?? view.word;
+  const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
+    model, new URL(location.pathname, location.href)).href : null;
   const graph = buildGallery(model);
   const chambers = useMemo(() => graph.list.filter(chamber => chamber.word.length <= view.depth),
     [graph, view.depth]);
@@ -754,10 +752,14 @@ function App() {
       <p>Reflect chambers on a line, in the dual plane, on the sphere of rays, and in Euclidean or hyperbolic slices.</p>
     </header>
     <div className="viewer">
-      <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
-        camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
-        fixedIdealVertex={fixedIdealVertex} setPoint={point => update({point})} setCamera={camera => update({camera})}
-        choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} />
+      <div className="plot-column">
+        <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
+          camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
+          fixedIdealVertex={fixedIdealVertex} setPoint={point => update({point})} setCamera={camera => update({camera})}
+          choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} />
+        <ShortestGallery model={model} word={view.word} destination={destination} followingGallery={Boolean(view.destination)}
+          onStep={word => update({word, destination})} routeHref={routeHref} idealGallery={idealGallery} />
+      </div>
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
         idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling}
         changeModel={id => setView(current => ({

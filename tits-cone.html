@@ -25,6 +25,7 @@
   h1 { font: 500 clamp(2.8rem, 8vw, 6rem)/1 Georgia, serif; letter-spacing: -.07em; margin: 14px 0 9px; }
   header p { margin: 0 0 21px; color: var(--muted); }
   .viewer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(226px, 266px); gap: 14px; align-items: start; }
+  .plot-column { min-width: 0; }
   figure { position: relative; margin: 0; min-width: 0; }
   canvas { display: block; width: 100%; aspect-ratio: 1.16; max-height: min(68vh, 620px); background: var(--plot); border-radius: 12px; cursor: crosshair; touch-action: manipulation; }
   canvas.dual-line { height: 150px; }
@@ -102,10 +103,13 @@
   .growth-axis { display: flex; justify-content: space-between; font-size: .75rem; margin-top: 2px; }
   code { font-family: ui-monospace, monospace; font-size: .94em; }
   @media (max-width: 700px) {
-    .viewer { grid-template-columns: 1fr; }
+    .viewer { grid-template-columns: minmax(0, 1fr); }
     canvas { aspect-ratio: 1.07; max-height: none; }
     aside { grid-template-columns: 1fr 1fr; gap: 8px; }
     .panel { padding: 10px; }
+  }
+  @media (pointer: coarse) {
+    .gallery-route .tools button { min-height: 44px; }
   }
   @media (max-width: 395px) {
     main { width: calc(100% - 22px); padding-top: 18px; }
