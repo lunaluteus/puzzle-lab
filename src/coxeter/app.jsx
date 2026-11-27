@@ -331,6 +331,7 @@ function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, upd
       if (location.hash !== "#growth-chart") return;
       const chart = details.current;
       chart.open = true;
+      chart.querySelector("summary").focus({preventScroll: true});
       chart.scrollIntoView();
     }
     followGrowthLink();
@@ -616,6 +617,8 @@ function Notes({notesRef}) {
       const notes = notesRef.current;
       notes.open = true;
       const target = hash === "#notes" ? notes : notes.querySelector(hash);
+      const focusTarget = target === notes ? notes.querySelector("summary") : target;
+      focusTarget.focus({preventScroll: true});
       target.scrollIntoView();
     }
     followNotesLink();
@@ -627,7 +630,7 @@ function Notes({notesRef}) {
     if (event.currentTarget.open) setOpened(true);
   }}>
     <summary>Notes on Coxeter groups and the Tits cone</summary>
-    <h2 id="classification">Classification through rank three</h2>
+    <h2 id="classification" tabIndex={-1}>Classification through rank three</h2>
     <p>The rank is the number of simple reflections. The label on a pair gives the order
       of their product. A label of 2 means the reflections commute, so the diagram omits that edge.
       An irreducible system has a connected diagram.</p>
@@ -705,7 +708,7 @@ function Notes({notesRef}) {
       {" "}<a href="?model=a1-i2-infinity&amp;destination=su">Compare the su and us routes</a>.</p>
     <p><a href="https://personal.math.ubc.ca/~cass/coxeter/crm1.html">Casselman on rank two and rank three</a>
       {" · "}<a href="https://people.math.osu.edu/davis.12/old_papers/djs2.pdf">Davis, Januszkiewicz and Scott on triangle groups, §7.3</a></p>
-    <h2 id="growth">How the gallery grows</h2>
+    <h2 id="growth" tabIndex={-1}>How the gallery grows</h2>
     <p>A chamber at length <var>n</var> takes <var>n</var> wall crossings to reach by a shortest gallery.
       Let <var>a</var><sub>n</sub> count those chambers. Each chart starts with the single chamber <var>C</var> at length zero.
       At depth <var>d</var>, the gallery contains <NoteFormula latex={mathNotes.growthTotal} /> chambers.
