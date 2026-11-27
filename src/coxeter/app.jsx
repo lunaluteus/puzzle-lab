@@ -253,10 +253,15 @@ function gallerySteps(route, byWord) {
 
 function GallerySteps({route, steps, word, label, onStep}) {
   const current = steps.indexOf(word);
+  // Aria-disabled keeps focus on the control that reached an endpoint.
+  const hasPrevious = current > 0;
+  const hasNext = current < steps.length - 1;
   return <>
     <div className="tools" role="group" aria-label={label + " navigation"}>
-      <button type="button" disabled={current <= 0} onClick={() => onStep(steps[current - 1])}>Previous</button>
-      <button type="button" disabled={current === steps.length - 1} onClick={() => onStep(steps[current + 1])}>
+      <button type="button" aria-disabled={!hasPrevious} tabIndex={hasPrevious ? 0 : -1}
+        onClick={() => { if (hasPrevious) onStep(steps[current - 1]); }}>Previous</button>
+      <button type="button" aria-disabled={!hasNext} tabIndex={hasNext ? 0 : -1}
+        onClick={() => { if (hasNext) onStep(steps[current + 1]); }}>
         {current < 0 ? "Start route" : "Next"}
       </button>
     </div>
