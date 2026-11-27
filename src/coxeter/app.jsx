@@ -430,7 +430,8 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
       </select>
       {model.family === "Finite dihedral" && <>
         <label className="depth-label" htmlFor="dihedral-order">Order of st</label>
-        <select id="dihedral-order" value={model.id} onChange={event => changeModel(event.target.value)}>
+        <select id="dihedral-order" value={model.id}
+          onChange={event => changeModel(event.target.value, {preserveGallery: true})}>
           {dihedralModels.map(example => <option key={example.id} value={example.id}>{example.exponents[0][1]}</option>)}
         </select>
         <label className="depth-label" htmlFor="coordinates">Coordinates</label>
@@ -820,7 +821,10 @@ function App() {
   const changeCoupling = id => {
     const maximum = exampleById.get(id).max;
     setView(current => ({
-      ...current, id, word: current.word.slice(0, maximum), depth: Math.min(current.depth, maximum), destination: null
+      ...current, id,
+      word: current.word.slice(0, maximum),
+      depth: Math.min(current.depth, maximum),
+      destination: current.destination?.length <= maximum ? current.destination : null
     }));
   };
 
