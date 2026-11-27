@@ -37,6 +37,7 @@ function readViewFromUrl() {
   }
   const word = readChamberWord("word") ?? "";
   const destination = readChamberWord("destination");
+  const alternateWord = resolveAlternateWord(query.get("alternate"), destination, byWord);
   const budgetDepth = Number.isInteger(budget) ? Math.min(budget, model.max) : model.depth;
   const depth = Math.max(word.length, destination?.length ?? 0, budgetDepth);
   const requestedZoom = Number(query.get("zoom"));
@@ -51,7 +52,7 @@ function readViewFromUrl() {
   const cumulativeGrowth = query.get("growth") === "cumulative";
   const logarithmicGrowth = query.get("growth-scale") === "log";
   return {
-    id: model.id, word, destination, depth, zoom,
+    id: model.id, word, destination, alternateWord, depth, zoom,
     camera, projection, coordinates, point, cumulativeGrowth, logarithmicGrowth
   };
 }
@@ -64,6 +65,8 @@ function viewUrl(view, model, url = new URL(location.href)) {
   else url.searchParams.delete("word");
   if (view.destination) url.searchParams.set("destination", view.destination);
   else url.searchParams.delete("destination");
+  if (view.alternateWord) url.searchParams.set("alternate", view.alternateWord);
+  else url.searchParams.delete("alternate");
   if (view.point) url.searchParams.set("point", view.point.join(","));
   else url.searchParams.delete("point");
   if (view.zoom === 1) url.searchParams.delete("zoom");
@@ -292,6 +295,11 @@ function resolveReducedWord(route, byWord) {
   return word.length === route.length ? word : null;
 }
 
+function resolveAlternateWord(word, destination, byWord) {
+  if (!destination || word?.length !== destination.length || word === destination) return null;
+  return resolveReducedWord(word, byWord) === destination ? word : null;
+}
+
 function GallerySteps({route, steps, word, label, onStep}) {
   const current = steps.indexOf(word);
   // Aria-disabled keeps focus on the control that reached an endpoint.
@@ -426,13 +434,15 @@ function GalleryGrowth({counts, depth, chamberLength, changeDepth, cumulative, l
 
 function Controls({model, view, count, countsByLength, chartHref, neighbors, idealGallery, update, choose, changeModel, changeCoupling}) {
   const triangleOptions = [triangleSeries, triangleSeriesWithFour].find(series => series.includes(model));
-  const idealGalleryHref = idealGallery ? viewUrl({...view, word: "", destination: idealGallery.word, zoom: 1,
+  const idealGalleryHref = idealGallery ? viewUrl({...view, word: "", destination: idealGallery.word, alternateWord: null, zoom: 1,
     depth: Math.max(view.depth, idealGallery.word.length)}, model, new URL(location.pathname, location.href)).href : null;
-  const changeDepth = depth => update({
-    depth,
-    word: view.word.slice(0, depth),
-    destination: view.destination?.length <= depth ? view.destination : null
-  });
+  const changeDepth = depth => {
+    const destination = view.destination?.length <= depth ? view.destination : null;
+    update({
+      depth, word: view.word.slice(0, depth), destination,
+      alternateWord: destination ? view.alternateWord : null
+    });
+  };
   return <aside aria-label="Chamber controls">
     <div className="panel">
       <label htmlFor="model">Coxeter example</label>
@@ -793,7 +803,6 @@ function Notes({notesRef}) {
 
 function App() {
   const [view, setView] = useState(readViewFromUrl);
-  const [alternateWord, setAlternateWord] = useState(null);
   const viewSearch = useRef(location.search);
   const notes = useRef(null);
   const model = exampleById.get(view.id);
@@ -809,7 +818,7 @@ function App() {
   const graph = buildGallery(model);
   const routeCount = graph.byWord.get(destination).shortestRouteCount;
   const alternatives = useMemo(() => [...alternateReducedWords(destination, model)], [destination, model]);
-  const alternative = alternatives.find(route => route.word === alternateWord) ?? alternatives[0];
+  const alternative = alternatives.find(route => route.word === view.alternateWord) ?? alternatives[0];
   const steps = gallerySteps(destination, graph.byWord);
   const alternateSteps = alternative ? gallerySteps(alternative.word, graph.byWord) : [];
   const chambers = useMemo(() => graph.list.filter(chamber => chamber.word.length <= view.depth),
@@ -818,9 +827,12 @@ function App() {
   const {neighbors} = chamber;
   const update = patch => setView(current => ({...current, ...patch}));
   const choose = word => {
-    if (word !== undefined) setView(current => ({
+    if (word === undefined) return;
+    const onRoute = steps.includes(word) || alternateSteps.includes(word);
+    setView(current => ({
       ...current, word, depth: Math.max(current.depth, word.length),
-      destination: steps.includes(word) || alternateSteps.includes(word) ? current.destination : null
+      destination: onRoute ? current.destination : null,
+      alternateWord: onRoute ? current.alternateWord : null
     }));
   };
   const selectOpposite = () => {
@@ -830,12 +842,15 @@ function App() {
   const changeModel = (id, {preserveGallery = false} = {}) => {
     const next = exampleById.get(id);
     const nextGallery = preserveGallery ? buildGallery(next).byWord : null;
-    setView(current => ({
-      ...current, id, zoom: 1, camera: null, point: null,
-      word: nextGallery ? gallerySteps(current.word, nextGallery).at(-1) : "",
-      destination: nextGallery ? resolveReducedWord(current.destination, nextGallery) : null,
-      depth: preserveGallery ? Math.min(current.depth, next.max) : next.depth
-    }));
+    setView(current => {
+      const destination = nextGallery ? resolveReducedWord(current.destination, nextGallery) : null;
+      return {
+        ...current, id, zoom: 1, camera: null, point: null,
+        word: nextGallery ? gallerySteps(current.word, nextGallery).at(-1) : "",
+        destination, alternateWord: resolveAlternateWord(current.alternateWord, destination, nextGallery),
+        depth: preserveGallery ? Math.min(current.depth, next.max) : next.depth
+      };
+    });
   };
   const changeCoupling = id => {
     const maximum = exampleById.get(id).max;
@@ -894,7 +909,7 @@ function App() {
           choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} selectOpposite={selectOpposite} />
         <ShortestGallery model={model} word={view.word}
           gallery={{destination, steps, alternative, alternatives, alternateSteps, routeCount}}
-          followingGallery={Boolean(view.destination)} onAlternate={setAlternateWord}
+          followingGallery={Boolean(view.destination)} onAlternate={alternateWord => update({destination, alternateWord})}
           onStep={word => update({word, destination})} routeHref={routeHref} idealGallery={idealGallery} />
         <CopyLink key={viewHref} href={viewHref} kind="View" copiedMessage="Link copied. It opens at the current chamber." />
       </div>
