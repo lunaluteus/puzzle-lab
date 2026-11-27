@@ -81,6 +81,7 @@
     <button id="new" type="button">换一题</button>
     <button id="hint" type="button">提示</button>
     <button id="undo" type="button">撤销</button>
+    <button id="redo" type="button">重做</button>
     <button id="reset" type="button">重来</button>
   </div>
 </main>
@@ -128,7 +129,7 @@ const sizeControl = $("size");
 const difficultyControl = $("difficulty");
 const tiles = $("tiles");
 const groups = $("groups");
-let solver, board, initial, history, first, proposed, message;
+let solver, board, initial, history, undone, first, proposed, message;
 let tileElements, groupButtons;
 
 function install(size, requested = null) {
@@ -203,25 +204,29 @@ function render() {
   }
   $("moves").textContent = history.length;
   $("hint").disabled = won;
-  $("undo").disabled = $("reset").disabled = history.length === 0;
+  $("undo").disabled = history.length === 0;
+  $("redo").disabled = undone.length === 0;
+  $("reset").disabled = history.length === 0 && undone.length === 0;
   $("status").textContent = won ? "排好了！用了 " + history.length + " 步。" : message;
 }
 
 function readProgress(opening) {
   const progress = window.history.state?.tripleRotate;
+  const redoHistory = progress?.undone ?? [];
   const validPosition = position => solver.hints.has(position?.board)
     && Number.isInteger(position.first) && position.first >= 0 && position.first < groupButtons.length;
   if (progress?.initial !== opening || !validPosition(progress) || !Array.isArray(progress.history)
-    || progress.history[0]?.board !== opening || !progress.history.every(validPosition)) return null;
-  return progress;
+    || (progress.history[0]?.board ?? progress.board) !== opening || !progress.history.every(validPosition)
+    || !Array.isArray(redoHistory) || !redoHistory.every(validPosition)) return null;
+  return {...progress, undone: redoHistory};
 }
 
 function saveProgress() {
   const url = new URL(location.href);
   url.searchParams.set("board", initial);
   const state = window.history.state;
-  if (!history.length && !state?.tripleRotate && url.href === location.href) return;
-  const progress = history.length ? {initial, board, first, history} : null;
+  const progress = history.length || undone.length ? {initial, board, first, history, undone} : null;
+  if (!progress && !state?.tripleRotate && url.href === location.href) return;
   try {
     window.history.replaceState({...state, tripleRotate: progress}, "", url);
   } catch {
@@ -231,7 +236,7 @@ function saveProgress() {
 
 function start(state, prompt = "选一组三格，再选轮转方向。", progress = null) {
   initial = state;
-  ({board, history, first} = progress ?? {board: state, history: [], first: 0});
+  ({board, history, undone, first} = progress ?? {board: state, history: [], undone: [], first: 0});
   proposed = null;
   message = progress ? "已恢复上次进度。" : prompt;
   if (!progress) saveProgress();
@@ -239,6 +244,7 @@ function start(state, prompt = "选一组三格，再选轮转方向。", progre
 }
 
 function play(direction) {
+  undone = [];
   history.push({board, first});
   board = rotate(board, first, direction);
   proposed = null;
@@ -260,12 +266,25 @@ $("hint").addEventListener("click", event => {
   if (event.detail === 0) $(proposed).focus();
 });
 $("undo").addEventListener("click", event => {
-  ({board, first} = history.pop());
+  const previous = history.pop();
+  undone.push({board, first: previous.first});
+  ({board, first} = previous);
   proposed = null;
   message = "已撤销一步。";
   saveProgress();
   render();
   if (event.detail === 0 && history.length === 0) groupButtons[first].focus();
+});
+$("redo").addEventListener("click", event => {
+  const next = undone.pop();
+  history.push({board, first: next.first});
+  ({board, first} = next);
+  proposed = null;
+  message = "已重做一步。";
+  saveProgress();
+  render();
+  if (board === solver.goal) $("new").focus();
+  else if (event.detail === 0 && undone.length === 0) groupButtons[first].focus();
 });
 $("reset").addEventListener("click", event => {
   start(initial);
