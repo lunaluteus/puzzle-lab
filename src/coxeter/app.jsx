@@ -25,7 +25,7 @@ function decodePoint(value) {
   return point.every(coordinate => Math.abs(coordinate) <= Number.MAX_SAFE_INTEGER) ? point : null;
 }
 
-function initialView() {
+function readViewFromUrl() {
   const query = new URLSearchParams(location.search);
   const model = exampleById.get(query.get("model")) ?? exampleById.get(defaultId);
   const budget = query.has("depth") ? Number(query.get("depth")) : model.depth;
@@ -72,6 +72,17 @@ function viewUrl(view, model, url = new URL(location.href)) {
   if (view.logarithmicGrowth) url.searchParams.set("growth-scale", "log");
   else url.searchParams.delete("growth-scale");
   return url;
+}
+
+function focusLinkedSection() {
+  const id = location.hash.slice(1);
+  if (!["notes", "classification", "growth", "growth-chart"].includes(id)) return;
+  const target = document.getElementById(id);
+  const section = target.closest("details");
+  section.open = true;
+  const focusTarget = target === section ? section.querySelector("summary") : target;
+  focusTarget.focus({preventScroll: true});
+  target.scrollIntoView();
 }
 
 function PointProbe({model, point, euclidean, setPoint}) {
@@ -325,20 +336,6 @@ function ShortestGallery({model, word, gallery, followingGallery, onStep, routeH
 }
 
 function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, update, chartHref}) {
-  const details = useRef(null);
-  useEffect(() => {
-    function followGrowthLink() {
-      if (location.hash !== "#growth-chart") return;
-      const chart = details.current;
-      chart.open = true;
-      chart.querySelector("summary").focus({preventScroll: true});
-      chart.scrollIntoView();
-    }
-    followGrowthLink();
-    window.addEventListener("hashchange", followGrowthLink);
-    return () => window.removeEventListener("hashchange", followGrowthLink);
-  }, []);
-
   const scale = logarithmic ? Math.log1p : count => count;
   let total = 0;
   const values = cumulative ? counts.map(count => {
@@ -350,7 +347,7 @@ function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, upd
     const quantity = count + (count === 1 ? " chamber" : " chambers");
     return cumulative ? "Depth " + length + ", " + quantity + " in total" : "Length " + length + ", " + quantity;
   });
-  return <details id="growth-chart" className="gallery-growth" ref={details}>
+  return <details id="growth-chart" className="gallery-growth">
     <summary>{cumulative ? "Chambers through depth" : "Chambers by length"}</summary>
     <p>Choose a bar to set the gallery depth.</p>
     <div className="growth-options">
@@ -611,21 +608,6 @@ function Inspector({model, coordinates, chamber}) {
 function Notes({notesRef}) {
   const [opened, setOpened] = useState(false);
   const NoteFormula = opened ? Formula : FormulaMarkup;
-  useEffect(() => {
-    function followNotesLink() {
-      const hash = location.hash;
-      if (!["#notes", "#classification", "#growth"].includes(hash)) return;
-      const notes = notesRef.current;
-      notes.open = true;
-      const target = hash === "#notes" ? notes : notes.querySelector(hash);
-      const focusTarget = target === notes ? notes.querySelector("summary") : target;
-      focusTarget.focus({preventScroll: true});
-      target.scrollIntoView();
-    }
-    followNotesLink();
-    window.addEventListener("hashchange", followNotesLink);
-    return () => window.removeEventListener("hashchange", followNotesLink);
-  }, [notesRef]);
 
   return <details id="notes" ref={notesRef} onToggle={event => {
     if (event.currentTarget.open) setOpened(true);
@@ -752,7 +734,8 @@ function Notes({notesRef}) {
 }
 
 function App() {
-  const [view, setView] = useState(initialView);
+  const [view, setView] = useState(readViewFromUrl);
+  const viewSearch = useRef(location.search);
   const notes = useRef(null);
   const model = exampleById.get(view.id);
   const idealGallery = idealVertexGallery(model);
@@ -793,10 +776,33 @@ function App() {
     }));
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    // Leave newly traversed history entries alone until their state is read.
+    if (location.search !== viewSearch.current) return;
     const url = viewUrl(view, model);
     if (url.href !== location.href) history.replaceState(null, "", url);
+    viewSearch.current = url.search;
   }, [view, model]);
+
+  useEffect(() => {
+    let focusFrame;
+    function restoreView() {
+      if (location.search !== viewSearch.current) {
+        viewSearch.current = location.search;
+        setView(readViewFromUrl());
+      }
+      cancelAnimationFrame(focusFrame);
+      focusFrame = requestAnimationFrame(focusLinkedSection);
+    }
+    focusLinkedSection();
+    window.addEventListener("popstate", restoreView);
+    window.addEventListener("hashchange", restoreView);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      window.removeEventListener("popstate", restoreView);
+      window.removeEventListener("hashchange", restoreView);
+    };
+  }, []);
 
   return <main>
     <header>
