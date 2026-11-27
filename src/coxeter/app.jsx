@@ -179,6 +179,7 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
   }
 
   function moveVertexFocus(event) {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
     const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
     if (!direction) return;
     event.preventDefault();
@@ -228,6 +229,7 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
       onPointerCancel={endDrag}
       onLostPointerCapture={endDrag}
       onKeyDown={event => {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
         const rotation = spherical && rotationKeys.get(event.key);
         if (rotation) {
           event.preventDefault();
