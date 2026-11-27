@@ -163,9 +163,18 @@ function install(size, requested = null) {
   groups.replaceChildren(...groupButtons);
   const sample = solver.goal[1] + solver.goal[0] + solver.goal.slice(2, -2)
     + solver.goal.at(-1) + solver.goal.at(-2);
-  const valid = requested !== solver.goal && solver.hints.has(requested);
-  const invalidLink = requested !== null && !valid;
-  start(valid ? requested : sample, invalidLink ? "题目链接里的牌面无效，已打开示例。" : undefined);
+  if (requested === null || (requested !== solver.goal && solver.hints.has(requested))) {
+    start(requested ?? sample);
+    return;
+  }
+
+  let reason = "链接需包含 5 到 8 个数字，从 1 到格数的数字须各出现一次。";
+  if (requested === solver.goal) {
+    reason = "链接里的数字已经排好。";
+  } else if ([...requested].sort().join("") === solver.goal) {
+    reason = "链接里的排列有奇数个逆序对。每次轮转相当于两次相邻交换，奇偶性不变，因此这组数字无法排好。";
+  }
+  start(sample, reason + "已打开示例。");
 }
 
 function render() {
