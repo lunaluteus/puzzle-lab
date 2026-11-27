@@ -31,10 +31,15 @@ function readViewFromUrl() {
   const model = exampleById.get(query.get("model")) ?? exampleById.get(defaultId);
   const budget = query.has("depth") ? Number(query.get("depth")) : model.depth;
   const {byWord} = buildGallery(model);
-  const requested = query.get("word");
-  const word = byWord.has(requested) ? requested : "";
-  const target = query.get("destination");
-  const destination = target && byWord.has(target) ? target : null;
+  function readChamberWord(parameter) {
+    const route = query.get(parameter);
+    if (!route || route.length > model.max) return "";
+    const word = gallerySteps(route, byWord).at(-1);
+    // A full shortest route has the same length as its canonical chamber word.
+    return word.length === route.length ? word : "";
+  }
+  const word = readChamberWord("word");
+  const destination = readChamberWord("destination") || null;
   const budgetDepth = Number.isInteger(budget) ? Math.min(budget, model.max) : model.depth;
   const depth = Math.max(word.length, destination?.length ?? 0, budgetDepth);
   const requestedZoom = Number(query.get("zoom"));
