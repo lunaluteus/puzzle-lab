@@ -32,7 +32,7 @@
   label { font-size: .875rem; }
   select, button { font: inherit; color: inherit; }
   button, select { touch-action: manipulation; }
-  header a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid #c57231; outline-offset: 3px; }
+  header a:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #c57231; outline-offset: 3px; }
   .navigation, .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .navigation { margin-bottom: 10px; justify-content: space-between; color: var(--muted); }
   select, .actions button {
@@ -90,6 +90,9 @@
   #steps:empty { display: none; }
   .actions { margin-top: 16px; }
   .actions #next { margin-inline-start: auto; background: var(--felt); color: var(--paper); border-color: var(--felt); }
+  #why-fractions { margin-top: 20px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+  #why-fractions summary { cursor: pointer; font-weight: 600; }
+  #why-fractions p:last-child { margin-bottom: 0; }
   @media (max-width: 460px) {
     main { padding-top: 28px; }
     header p { margin-bottom: 18px; }
@@ -121,6 +124,12 @@
     <button id="reset" type="button">重来</button>
     <button id="next" type="button">下一题</button>
   </div>
+  <details id="why-fractions">
+    <summary>为什么这些题一定要用分数？</summary>
+    <p>先只允许整数中间结果。对每组牌，记录用完这组牌能得到的所有数。一张牌只能得到自己的点数。两张或更多牌就拆成两组，把两组的结果两两做四则运算。减法和除法要试两种顺序，遇到除以零或非整数结果就略过。负整数和零都可以保留。</p>
+    <p>例如只用 3 和 8，按这个规则能得到 −5、5、11 和 24。同点数的牌也要按位置区分。任何合法算式的最后一步都把牌分到左右两个互不重叠的组，所以逐组枚举能找全结果。</p>
+    <p>这 16 题用完四张牌时，整数搜索的结果集合里都没有 24。允许精确分数后，每道题都能找到解，所以每个解都至少需要一个非整数中间结果。</p>
+  </details>
 </main>
 <script id="fraction-24-rules">
 const puzzles = [
@@ -500,6 +509,13 @@ window.addEventListener("storage", event => {
   }
   renderProgress();
 });
+
+function revealFractionNotes() {
+  if (location.hash === "#why-fractions") $("why-fractions").open = true;
+}
+
+window.addEventListener("hashchange", revealFractionNotes);
+revealFractionNotes();
 const requestedPuzzle = Number(new URLSearchParams(location.search).get("puzzle"));
 const validPuzzle = Number.isInteger(requestedPuzzle) && requestedPuzzle >= 1 && requestedPuzzle <= puzzles.length;
 const index = validPuzzle ? requestedPuzzle - 1 : 0;
