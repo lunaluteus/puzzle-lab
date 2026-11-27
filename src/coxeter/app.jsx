@@ -115,7 +115,8 @@ function PointProbe({model, point, euclidean, setPoint}) {
   </>;
 }
 
-function Plot({model, chambers, word, zoom, camera, projection, coordinates, point, setPoint, setCamera, choose, cross, neighbors}) {
+function Plot({model, chambers, word, zoom, camera, projection, coordinates, point, fixedIdealVertex,
+  setPoint, setCamera, choose, cross, neighbors}) {
   const canvas = useRef(null);
   const pick = useRef(null);
   const drag = useRef(null);
@@ -129,14 +130,15 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
   useLayoutEffect(() => {
     const redraw = () => {
       pick.current = drawPlot(canvas.current, model, chambers, word, {
-        zoom, point, camera: plotCamera, projection, coordinates, onWalls: affineProduct ? setPlotWalls : undefined
+        zoom, point, camera: plotCamera, projection, coordinates, fixedIdealVertex,
+        onWalls: affineProduct ? setPlotWalls : undefined
       });
     };
     redraw();
     const observer = new ResizeObserver(redraw);
     observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates, affineProduct]);
+  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates, fixedIdealVertex, affineProduct]);
 
   const centeredCamera = () => sphereCamera(chambers.find(chamber => chamber.word === word).rays.map(sphere(model)));
 
@@ -209,6 +211,7 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
       {(model.family === "Hyperbolic" || limitRays(model)) &&
         <span id="limit-key"><i className="limit" /> Limit boundary</span>}
       {idealVertexIndices(model).length > 0 && <span><i className="ideal-corner" /> Selected ideal vertices</span>}
+      {fixedIdealVertex !== null && <span><i className="fixed-ideal-corner" /> Fixed ideal vertex</span>}
       {spherical && <span className="sphere-controls">
         Drag or use arrow keys to rotate.
         <button type="button" disabled={!camera} onClick={() => setCamera(null)}>Center on selection</button>
@@ -282,8 +285,8 @@ function ShortestGallery({model, word, destination, followingGallery, onStep, ro
           same endpoint via different half-strips.</p>}
     </> : translation ? <p>Follow the two wall crossings from <var>C</var>. Together they translate the
       starting chamber two units {destination === "st" ? "left" : "right"}.</p>
-      : destination === idealGallery?.word ? <p>Cross walls <var>{destination[0]}</var> and <var>{destination[1]}</var> in turn.
-        Watch the ideal vertex where they meet stay in the same place.</p>
+      : followingGallery && destination === idealGallery?.word ? <p>Cross walls <var>{destination[0]}</var> and <var>{destination[1]}</var> in turn.
+        Watch the ringed ideal vertex stay in the same place.</p>
       : <p>Each letter crosses one wall.</p>}
     <CopyRouteLink key={routeHref} href={routeHref} />
   </details>;
@@ -343,10 +346,9 @@ function GalleryGrowth({counts, depth, changeDepth, cumulative, logarithmic, upd
   </details>;
 }
 
-function Controls({model, view, count, countsByLength, neighbors, update, choose, changeModel, changeCoupling}) {
+function Controls({model, view, count, countsByLength, neighbors, idealGallery, update, choose, changeModel, changeCoupling}) {
   const destination = view.destination ?? view.word;
   const triangleOptions = [triangleSeries, triangleSeriesWithFour].find(series => series.includes(model));
-  const idealGallery = idealVertexGallery(model);
   const idealGalleryHref = idealGallery ? viewUrl({...view, word: "", destination: idealGallery.word, zoom: 1,
     depth: Math.max(view.depth, idealGallery.word.length)}, model, new URL(location.pathname, location.href)).href : null;
   const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
@@ -714,6 +716,9 @@ function App() {
   const [view, setView] = useState(initialView);
   const notes = useRef(null);
   const model = exampleById.get(view.id);
+  const idealGallery = idealVertexGallery(model);
+  const fixedIdealVertex = view.destination === idealGallery?.word && idealGallery.word.startsWith(view.word)
+    ? idealGallery.vertex : null;
   const graph = buildGallery(model);
   const chambers = useMemo(() => graph.list.filter(chamber => chamber.word.length <= view.depth),
     [graph, view.depth]);
@@ -751,10 +756,10 @@ function App() {
     <div className="viewer">
       <Plot key={model.id} model={model} chambers={chambers} word={view.word} zoom={view.zoom}
         camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
-        setPoint={point => update({point})} setCamera={camera => update({camera})}
+        fixedIdealVertex={fixedIdealVertex} setPoint={point => update({point})} setCamera={camera => update({camera})}
         choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} />
       <Controls model={model} view={view} count={chambers.length} countsByLength={graph.countsByLength} neighbors={neighbors}
-        update={update} choose={choose} changeCoupling={changeCoupling}
+        idealGallery={idealGallery} update={update} choose={choose} changeCoupling={changeCoupling}
         changeModel={id => setView(current => ({
           ...current, id, word: "", destination: null, zoom: 1, depth: exampleById.get(id).depth, camera: null, point: null
         }))} />

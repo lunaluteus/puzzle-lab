@@ -62,7 +62,7 @@ export function poincareCircle([ax, ay], [bx, by]) {
 }
 
 export function drawPlot(plot, model, chambers, word, {
-  zoom = 1, point = null, camera = null, projection = "klein", coordinates = "dual", onWalls
+  zoom = 1, point = null, camera = null, projection = "klein", coordinates = "dual", fixedIdealVertex = null, onWalls
 } = {}) {
   const ctx = plot.getContext("2d");
   const {width, height} = plot.getBoundingClientRect();
@@ -406,7 +406,16 @@ export function drawPlot(plot, model, chambers, word, {
     for (const chamber of chambers) {
       if (chamber.word !== word) paintIdealVertices(chamber, 1.6, palette.line);
     }
-    paintIdealVertices(chambers.find(chamber => chamber.word === word), 3.5, "#ffe2a7");
+    const selected = chambers.find(chamber => chamber.word === word);
+    paintIdealVertices(selected, 3.5, "#ffe2a7");
+    if (fixedIdealVertex !== null) {
+      const [x, y] = display(project(selected.rays[fixedIdealVertex]));
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, tau);
+      ctx.strokeStyle = palette.label;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
   }
 
 
