@@ -106,6 +106,7 @@ export const mathNotes = {
   kleinMetric: tex`g_p(u,v)=\frac{u\cdot v}{1-\|p\|^2}
     +\frac{(p\cdot u)(p\cdot v)}{(1-\|p\|^2)^2}`,
   growthTotal: tex`\sum_{k=0}^{d} a_k`,
+  growthH3: tex`\prod_{e\in\{1,5,9\}}(1+t+\cdots+t^e)`,
   growthAffine: tex`a_n=3n\quad(n\ge 1)`,
   growthProduct: tex`a_1=3,\quad a_n=4\quad(n\ge 2)`,
   growthIdeal: tex`a_n=3\cdot 2^{n-1}\quad(n\ge 1)`,

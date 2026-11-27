@@ -157,7 +157,10 @@ test("finite dihedral chambers have equal angles in invariant Euclidean coordina
   }
 });
 
-test("affine A2 and the ideal triangle have the expected growth", () => {
+test("spherical H3, affine A2, and the ideal triangle have the expected growth", () => {
+  // Coefficients of the product of geometric sums of degrees 1, 5, and 9.
+  const spherical = buildGallery(exampleById.get("h3")).countsByLength;
+  assert.deepEqual(spherical, [1, 3, 5, 7, 9, 11, 12, 12, 12, 12, 11, 9, 7, 5, 3, 1]);
   const affine = buildGallery(exampleById.get("affine2")).countsByLength;
   const ideal = buildGallery(exampleById.get("ideal")).countsByLength;
   assert.equal(affine[0], 1);

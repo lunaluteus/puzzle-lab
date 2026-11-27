@@ -709,6 +709,11 @@ function Notes({notesRef}) {
     </ul>
     <p>At depth six, these galleries contain 24, 64, and 190 chambers, respectively. The ideal example
       opens on a logarithmic scale so the earliest layers are visible alongside the later ones.</p>
+    <p>For <a href="?model=h3#growth-chart">spherical H₃</a>, the growth polynomial is
+      {" "}<NoteFormula latex={mathNotes.growthH3} />. Each factor has symmetric coefficients, so the bars
+      at lengths <var>n</var> and 15 − <var>n</var> match. The last bar counts the unique chamber at length 15.
+      Set <var>t</var> = 1 in the polynomial to count all 120 chambers.
+      {" "}<a href="https://homeweb.unifr.ch/kellerha/pub/YEUJC1817.pdf">Kellerhals and Perren, Table 1</a>.</p>
     <h2>Coordinates and boundaries</h2>
     <p>Write <NoteFormula latex={mathNotes.coordinate} /> in the dual of the simple-root space.
       The fundamental chamber is <NoteFormula latex={mathNotes.chamber} />, and the Tits cone is <NoteFormula latex={mathNotes.cone} />.
