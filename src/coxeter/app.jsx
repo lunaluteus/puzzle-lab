@@ -300,6 +300,18 @@ function resolveAlternateWord(word, destination, byWord) {
   return resolveReducedWord(word, byWord) === destination ? word : null;
 }
 
+function findAlternateThrough(alternatives, byWord, word, previous) {
+  let fallback = null;
+  for (const route of alternatives) {
+    const steps = gallerySteps(route.word, byWord);
+    if (steps[word.length] !== word) continue;
+    // Prefer a route that also passes through the chamber the user just left.
+    if (steps[previous.length] === previous) return route.word;
+    fallback ??= route.word;
+  }
+  return fallback;
+}
+
 function GallerySteps({route, steps, word, label, onStep}) {
   const current = steps.indexOf(word);
   // Aria-disabled keeps focus on the control that reached an endpoint.
@@ -828,11 +840,13 @@ function App() {
   const update = patch => setView(current => ({...current, ...patch}));
   const choose = word => {
     if (word === undefined) return;
-    const onRoute = steps.includes(word) || alternateSteps.includes(word);
+    const onShownRoute = steps.includes(word) || alternateSteps.includes(word);
+    const nextAlternate = view.destination && !onShownRoute
+      ? findAlternateThrough(alternatives, graph.byWord, word, view.word) : null;
     setView(current => ({
       ...current, word, depth: Math.max(current.depth, word.length),
-      destination: onRoute ? current.destination : null,
-      alternateWord: onRoute ? current.alternateWord : null
+      destination: onShownRoute || nextAlternate ? current.destination : null,
+      alternateWord: onShownRoute ? current.alternateWord : nextAlternate
     }));
   };
   const selectOpposite = () => {
