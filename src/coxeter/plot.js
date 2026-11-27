@@ -70,7 +70,7 @@ export function drawPlot(plot, model, chambers, word, {
     onWalls?.([]);
     return () => null;
   }
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const ratio = Math.min(globalThis.devicePixelRatio || 1, 2);
   plot.width = Math.round(width * ratio);
   plot.height = Math.round(height * ratio);
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);

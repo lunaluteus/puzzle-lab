@@ -7,7 +7,7 @@ import {
   probeRankTwo, reflect, slice, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, vertexAngles, wallNames
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
-import { poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
+import { drawPlot, poincareCircle, toKlein, toPoincare } from "../src/coxeter/plot.js";
 import { exampleFormulae, gramEntry, inspectorMath, mathNotes } from "../src/coxeter/formulas.js";
 
 function close(a, b) {
@@ -208,6 +208,37 @@ test("Poincaré geodesics preserve the corners throughout each gallery", () => {
     }
   }
   assert.equal(poincareCircle([-.5, 0], [.5, 0]), null);
+});
+
+test("ideal vertex hit areas extend beyond the disk and preserve an incident selection", () => {
+  const model = exampleById.get("ideal");
+  const {list, byWord} = buildGallery(model);
+  const chambers = list.filter(chamber => chamber.word.length <= 1);
+  const {project} = slice(model);
+  const side = 400;
+  const pointNear = (ray, offset) => project(ray).map(coordinate => side / 2 + coordinate * (.45 * side + offset));
+  const newVertex = byWord.get("s").rays[0];
+  const sharedVertex = byWord.get("s").rays[1];
+  const noop = () => {};
+  const context = {
+    arc: noop, beginPath: noop, closePath: noop, fill: noop, fillRect: noop, fillText: noop,
+    lineTo: noop, moveTo: noop, setLineDash: noop, setTransform: noop, stroke: noop
+  };
+  const canvas = {
+    getContext: () => context,
+    getBoundingClientRect: () => ({width: side, height: side})
+  };
+
+  for (const projection of ["klein", "poincare"]) {
+    const fromHome = drawPlot(canvas, model, chambers, "", {projection});
+    assert.equal(fromHome(...pointNear(newVertex, 3)).word, "s", projection);
+    assert.equal(fromHome(...pointNear(newVertex, 12)).word, null, projection);
+
+    const fromOtherChamber = drawPlot(canvas, model, chambers, "t", {projection});
+    assert.equal(fromOtherChamber(...pointNear(sharedVertex, 3)).word, "", projection);
+    const fromIncidentChamber = drawPlot(canvas, model, chambers, "s", {projection});
+    assert.equal(fromIncidentChamber(...pointNear(sharedVertex, 3)).word, null, projection);
+  }
 });
 
 test("hemisphere clipping keeps front vertices and adds intersections on the horizon", () => {
