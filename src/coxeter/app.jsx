@@ -306,6 +306,12 @@ function GallerySteps({route, steps, word, label, onStep}) {
 
 function CopyLink({href, kind, copiedMessage}) {
   const [status, setStatus] = useState("");
+  const button = useRef(null);
+  const manualLink = useRef(null);
+  useLayoutEffect(() => {
+    if (status === "manual" && document.activeElement === button.current) manualLink.current.focus();
+  }, [status]);
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(href);
@@ -316,11 +322,11 @@ function CopyLink({href, kind, copiedMessage}) {
   }
   return <>
     <div className="tools">
-      <button type="button" onClick={copy}>Copy {kind.toLowerCase()} link</button>
+      <button type="button" ref={button} onClick={copy}>Copy {kind.toLowerCase()} link</button>
       <span role="status">{status === "copied" ? copiedMessage
         : status === "manual" ? "Select and copy the URL below." : ""}</span>
     </div>
-    {status === "manual" && <input className="share-link" aria-label={kind + " URL"} readOnly value={href}
+    {status === "manual" && <input ref={manualLink} className="share-link" aria-label={kind + " URL"} readOnly value={href}
       onFocus={event => event.currentTarget.select()} />}
   </>;
 }
