@@ -62,12 +62,14 @@ export function poincareCircle([ax, ay], [bx, by]) {
 }
 
 export function drawPlot(plot, model, chambers, word, {
-  zoom = 1, point = null, camera = null, projection = "klein", coordinates = "dual", fixedIdealVertex = null, onWalls
+  zoom = 1, point = null, camera = null, projection = "klein", coordinates = "dual", fixedIdealVertex = null,
+  onWalls, onIdealVertices
 } = {}) {
   const ctx = plot.getContext("2d");
   const {width, height} = plot.getBoundingClientRect();
   if (width === 0 || height === 0) {
     onWalls?.([]);
+    onIdealVertices?.([]);
     return () => null;
   }
   const ratio = Math.min(globalThis.devicePixelRatio || 1, 2);
@@ -408,6 +410,15 @@ export function drawPlot(plot, model, chambers, word, {
     }
     const selected = chambers.find(chamber => chamber.word === word);
     paintIdealVertices(selected, 3.5, "#ffe2a7");
+    if (onIdealVertices) {
+      const positions = idealMarkers.map(({x, y}) => ({x, y,
+        angle: wrap(Math.atan2(y - view.y, x - view.x) + Math.PI / 2)}));
+      positions.sort((a, b) => a.angle - b.angle);
+      const coincident = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) <= 1e-6;
+      const unique = positions.filter((position, i) => i === 0 || !coincident(position, positions[i - 1]));
+      if (unique.length > 1 && coincident(unique[0], unique.at(-1))) unique.pop();
+      onIdealVertices(unique);
+    }
     if (fixedIdealVertex !== null) {
       const [x, y] = display(project(selected.rays[fixedIdealVertex]));
       ctx.beginPath();

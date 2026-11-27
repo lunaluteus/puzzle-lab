@@ -65,6 +65,9 @@
     outline: 3px solid #146d63; outline-offset: 3px;
   }
   .plot-wall:focus-visible { outline-color: #fff6dd; outline-offset: 1px; }
+  .plot-ideal-vertex { position: absolute; transform: translate(-50%, -50%); width: 18px; height: 18px;
+    min-height: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; pointer-events: none; }
+  .plot-ideal-vertex:focus-visible { outline-color: #fff6dd; outline-offset: 0; box-shadow: 0 0 0 5px #14232d; }
   .depth-label { margin-top: 14px; display: flex; justify-content: space-between; gap: 6px; }
   .projection-control { margin-top: 14px; }
   input[type=range] { width: 100%; margin: 6px 0 0; accent-color: var(--accent); }

@@ -122,7 +122,10 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
   const drag = useRef(null);
   const [previewCamera, setPreviewCamera] = useState(null);
   const [plotWalls, setPlotWalls] = useState([]);
+  const [idealVertices, setIdealVertices] = useState([]);
+  const [activeVertex, setActiveVertex] = useState(0);
   const affineProduct = model === affineDihedralProduct;
+  const hasIdealVertices = idealVertexIndices(model).length > 0;
   const spherical = model.family === "Spherical";
   const euclidean = model.family === "Finite dihedral" && coordinates === "euclidean";
   const plotCamera = previewCamera ?? camera;
@@ -131,22 +134,36 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
     const redraw = () => {
       pick.current = drawPlot(canvas.current, model, chambers, word, {
         zoom, point, camera: plotCamera, projection, coordinates, fixedIdealVertex,
-        onWalls: affineProduct ? setPlotWalls : undefined
+        onWalls: affineProduct ? setPlotWalls : undefined,
+        onIdealVertices: hasIdealVertices ? setIdealVertices : undefined
       });
     };
     redraw();
     const observer = new ResizeObserver(redraw);
     observer.observe(canvas.current);
     return () => observer.disconnect();
-  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates, fixedIdealVertex, affineProduct]);
+  }, [model, chambers, word, zoom, point, plotCamera, projection, coordinates, fixedIdealVertex, affineProduct, hasIdealVertices]);
 
   const centeredCamera = () => sphereCamera(chambers.find(chamber => chamber.word === word).rays.map(sphere(model)));
 
-  function selectAt(event) {
-    const box = event.currentTarget.getBoundingClientRect();
-    const hit = pick.current?.(event.clientX - box.left, event.clientY - box.top);
+  function selectPoint(x, y) {
+    const hit = pick.current?.(x, y);
     if (hit?.point) setPoint(hit.point);
     if (typeof hit?.word === "string") choose(hit.word);
+  }
+
+  function selectAt(event) {
+    const box = event.currentTarget.getBoundingClientRect();
+    selectPoint(event.clientX - box.left, event.clientY - box.top);
+  }
+
+  function moveVertexFocus(event) {
+    const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (!direction) return;
+    event.preventDefault();
+    const buttons = [...event.currentTarget.children];
+    const next = (buttons.indexOf(event.target) + direction + buttons.length) % buttons.length;
+    buttons[next].focus();
   }
 
   function endDrag(event) {
@@ -205,12 +222,19 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
     {plotWalls.map(({wall, x, y}) => <button className="plot-wall" type="button" key={wall}
       style={{left: x, top: y}} aria-label={"Cross wall " + wall + " on the plot"}
       disabled={neighbors[wall] === undefined} onClick={() => cross(wall)}>{wall}</button>)}
+    {idealVertices.length > 0 && <div role="group" aria-label="Ideal vertices. Use Left and Right Arrow to move."
+      onKeyDown={moveVertexFocus}>
+      {idealVertices.map(({x, y}, index) => <button className="plot-ideal-vertex" type="button" key={index}
+        style={{left: x, top: y}} aria-label={"Ideal vertex " + (index + 1) + " of " + idealVertices.length}
+        tabIndex={index === Math.min(activeVertex, idealVertices.length - 1) ? 0 : -1}
+        onFocus={() => setActiveVertex(index)} onClick={() => selectPoint(x, y)} />)}
+    </div>}
     <figcaption>
       <span><i className="fundamental" /> Fundamental chamber</span>
       <span><i className="selected" /> Selected chamber</span>
       {(model.family === "Hyperbolic" || limitRays(model)) &&
         <span id="limit-key"><i className="limit" /> {model.family === "Hyperbolic" ? "Circle at infinity" : "Limit rays"}</span>}
-      {idealVertexIndices(model).length > 0 && <span><i className="ideal-corner" /> Selected ideal vertices</span>}
+      {hasIdealVertices && <span><i className="ideal-corner" /> Selected ideal vertices</span>}
       {fixedIdealVertex !== null && <span><i className="fixed-ideal-corner" /> Fixed ideal vertex</span>}
       {spherical && <span className="sphere-controls">
         Drag or use arrow keys to rotate.
@@ -556,7 +580,8 @@ function Inspector({model, coordinates, chamber}) {
         <p>Intrinsic corner angles <Formula latex={angles} />, in wall-pair order{" "}
           <var>t–u</var>, <var>u–s</var>, <var>s–t</var>.</p>
         {idealCount > 0 && <p>The selected chamber has {idealCount} ideal {idealCount === 1 ? "vertex" : "vertices"}
-          {" "}on the boundary circle, with angle zero. Select a boundary dot to jump to a chamber at that vertex.</p>}
+          {" "}on the boundary circle, with angle zero. Select a boundary dot to jump to a chamber at that vertex.
+          Use Tab to reach the dots, arrow keys to move, and Enter to select.</p>}
         <p>Angle sum <Formula latex={angleSum} label="Triangle angle sum" />.</p>
         {model.family === "Hyperbolic" &&
           <p>Hyperbolic area <Formula latex={area} /> at curvature −1.</p>}

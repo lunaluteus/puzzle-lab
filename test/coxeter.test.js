@@ -230,7 +230,11 @@ test("ideal vertex hit areas extend beyond the disk and preserve an incident sel
   };
 
   for (const projection of ["klein", "poincare"]) {
-    const fromHome = drawPlot(canvas, model, chambers, "", {projection});
+    let vertices;
+    const fromHome = drawPlot(canvas, model, chambers, "", {projection, onIdealVertices: positions => { vertices = positions; }});
+    assert.equal(vertices.length, 6, projection);
+    assert.ok(vertices.every(({angle}, index) => index === 0 || angle > vertices[index - 1].angle), projection);
+    assert.deepEqual(vertices.map(({x, y}) => fromHome(x, y).word).sort(), [null, null, null, "s", "t", "u"], projection);
     assert.equal(fromHome(...pointNear(newVertex, 3)).word, "s", projection);
     assert.equal(fromHome(...pointNear(newVertex, 12)).word, null, projection);
 
