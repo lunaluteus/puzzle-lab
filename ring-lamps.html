@@ -423,7 +423,7 @@ function puzzleUrl(mask) {
 function saveProgress() {
   const url = puzzleUrl(initial);
   const state = window.history.state;
-  const progress = {opening: url.search, presses: pressHistory, undone: undonePresses};
+  const progress = {opening: url.search, presses: pressHistory, undone: undonePresses, draft};
   let entry = {id: progressId};
   try {
     sessionStorage.setItem(progressKey, JSON.stringify(progress));
@@ -448,14 +448,20 @@ function readProgress() {
   }
 }
 
-function start(mask, message = "", {presses = [], undone = []} = {}) {
+function start(mask, message = "", {presses = [], undone = [], draft: savedDraft = null} = {}) {
   initial = mask;
   pressHistory = presses;
   undonePresses = undone;
   lights = pressHistory.reduce((state, lamp) => state ^ windows[lamp], initial);
-  draft = null;
+  draft = savedDraft;
   saveProgress();
   render(pressHistory.length || undonePresses.length ? "已恢复上次进度。" : message);
+}
+
+function setDraft(mask, message) {
+  draft = mask;
+  saveProgress();
+  render(message);
 }
 
 async function sharePuzzle() {
@@ -476,8 +482,7 @@ async function sharePuzzle() {
 
 function toggleLamp(i) {
   if (draft !== null) {
-    draft ^= 1 << i;
-    render();
+    setDraft(draft ^ (1 << i));
     return;
   }
   undonePresses = [];
@@ -598,17 +603,12 @@ document.getElementById("challenge").addEventListener("click", () => startChalle
 document.getElementById("share").addEventListener("click", sharePuzzle);
 shareUrl.addEventListener("focus", () => shareUrl.select());
 edit.addEventListener("click", () => {
-  draft = initial;
-  render();
+  setDraft(initial);
   lamps[0].focus();
 });
-document.getElementById("clear-lights").addEventListener("click", () => {
-  draft = 0;
-  render();
-});
+document.getElementById("clear-lights").addEventListener("click", () => setDraft(0));
 document.getElementById("cancel-edit").addEventListener("click", () => {
-  draft = null;
-  render("已取消编辑。");
+  setDraft(null, "已取消编辑。");
   edit.focus();
 });
 document.getElementById("apply-edit").addEventListener("click", () => {
@@ -674,7 +674,13 @@ if (shared) {
   const preset = size === 21 && shared.rule === "spaced" && shared.mask === challengePuzzle;
   const saved = readProgress();
   const presses = saved?.opening === puzzleUrl(shared.mask).search ? validPresses(saved.presses) : null;
-  const progress = presses ? {presses, undone: validPresses(saved.undone) ?? []} : undefined;
+  const draftMask = saved?.draft;
+  const validDraft = Number.isInteger(draftMask) && draftMask >= 0 && draftMask < (1 << size);
+  const progress = presses ? {
+    presses,
+    undone: validPresses(saved.undone) ?? [],
+    draft: validDraft ? draftMask : null
+  } : undefined;
   start(shared.mask, preset ? challengePrompt : "", progress);
 } else if (query.get("challenge") === "21") {
   startChallenge();
