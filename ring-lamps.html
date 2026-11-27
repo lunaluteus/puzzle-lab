@@ -116,7 +116,7 @@
     <p id="rule-description">点一盏灯，从它开始顺时针翻转连续几盏。试着关掉所有灯。</p>
   </header>
   <div class="layout">
-    <div id="board" class="board" role="group" aria-label="环上的灯">
+    <div id="board" class="board" role="group" aria-label="环上的灯" aria-describedby="rule-description">
       <div class="meter"><strong id="lit-count">0</strong><span>盏还亮着</span></div>
     </div>
     <div class="panel">
@@ -366,8 +366,9 @@ function render(message = "", suggested = -1, parityGroup = 0) {
   const rule = ruleControl.value === "spaced"
     ? "点第 i 盏灯会翻转第 i、i+1、i+3 盏，编号绕回一圈。"
     : "点一盏灯会从它开始顺时针翻转连续几盏。";
-  ruleDescription.textContent = editing ? "编辑开局时，每次只切换选中的一盏灯。"
+  const instruction = editing ? "编辑开局时，每次只切换选中的一盏灯。"
     : rule + "试着关掉所有灯。用鼠标指向或用键盘聚焦，可以预览这一步。";
+  ruleDescription.textContent = instruction + "用左右方向键在灯之间移动，按回车操作。";
   renderPreview();
 }
 
@@ -472,6 +473,7 @@ function installBoard() {
     const lamp = document.createElement("button");
     lamp.type = "button";
     lamp.className = "lamp";
+    lamp.tabIndex = i === 0 ? 0 : -1;
     lamp.textContent = String(i + 1);
     lamp.dataset.playDescription = targets.length === size ? "翻转全部灯"
       : `翻转 ${targets.map(target => target + 1).join("、")} 号灯`;
@@ -522,10 +524,19 @@ board.addEventListener("pointerleave", () => {
   renderPreview();
 });
 board.addEventListener("focusin", event => {
+  lamps.forEach(lamp => { lamp.tabIndex = lamp === event.target ? 0 : -1; });
   if (event.target.matches(":focus-visible")) hoveredLamp = null;
   renderPreview();
 });
 board.addEventListener("focusout", () => queueMicrotask(renderPreview));
+board.addEventListener("keydown", event => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  const offset = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+  const index = lamps.indexOf(event.target);
+  if (!offset || index < 0) return;
+  event.preventDefault();
+  lamps[(index + offset + size) % size].focus();
+});
 
 sizeControl.addEventListener("change", () => {
   size = Number(sizeControl.value);
