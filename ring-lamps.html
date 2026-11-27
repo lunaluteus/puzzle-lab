@@ -94,10 +94,10 @@
     color: var(--ink);
     background: var(--surface);
   }
-  .actions button:hover:enabled, select:hover { border-color: var(--accent); }
-  .actions button:disabled { opacity: .45; cursor: default; }
+  .actions button:hover:enabled:where(:not([aria-disabled="true"])), select:hover { border-color: var(--accent); }
+  .actions button:disabled, .actions button[aria-disabled="true"] { opacity: .45; cursor: default; }
   .actions .primary { background: #d8b561; color: #241c0b; border-color: #d8b561; font-weight: 650; }
-  .actions #clear-lights, .actions .share-control { grid-column: 1 / -1; }
+  .actions #clear-lights, .actions #challenge, .actions .share-control { grid-column: 1 / -1; }
   .share-control button, .share-url { width: 100%; }
   .share-feedback { color: var(--muted); font-size: .9rem; }
   .share-feedback:not(:empty) { margin-top: 7px; }
@@ -136,10 +136,11 @@
       <div class="actions" id="play-actions">
         <button type="button" class="primary" id="new">换一题</button>
         <button type="button" id="hint">提示</button>
-        <button type="button" id="undo" disabled>撤销</button>
+        <button type="button" id="undo" aria-disabled="true" tabindex="-1">撤销</button>
+        <button type="button" id="redo" aria-disabled="true" tabindex="-1">重做</button>
         <button type="button" id="reset" disabled>重来</button>
-        <button type="button" id="challenge">随机 21 灯挑战</button>
         <button type="button" id="edit">编辑开局</button>
+        <button type="button" id="challenge">随机 21 灯挑战</button>
         <div class="share-control">
           <button type="button" id="share">复制灯态链接</button>
           <p class="share-feedback" id="share-feedback" role="status"></p>
@@ -280,6 +281,7 @@ const sizeControl = document.getElementById("size");
 const spanControl = document.getElementById("span");
 const status = document.getElementById("status");
 const undo = document.getElementById("undo");
+const redo = document.getElementById("redo");
 const reset = document.getElementById("reset");
 const hint = document.getElementById("hint");
 const litCount = document.getElementById("lit-count");
@@ -303,6 +305,7 @@ let initial = initialPuzzle;
 let lights = initial;
 let draft = null;
 let pressHistory = [];
+let undonePresses = [];
 let lamps = [];
 let windows = [];
 let hoveredLamp = null;
@@ -327,6 +330,11 @@ function renderPreview() {
   lamps.forEach((lamp, i) => lamp.classList.toggle("preview", Boolean(effect & (1 << i))));
 }
 
+function setHistoryAction(button, available) {
+  button.setAttribute("aria-disabled", String(!available));
+  button.tabIndex = available ? 0 : -1;
+}
+
 function render(message = "", suggested = -1, parityGroup = 0) {
   shareRevision++;
   shareFeedback.textContent = "";
@@ -348,7 +356,9 @@ function render(message = "", suggested = -1, parityGroup = 0) {
   playActions.hidden = editing;
   editActions.hidden = !editing;
   ruleControl.disabled = sizeControl.disabled = spanControl.disabled = editing;
-  undo.disabled = reset.disabled = pressHistory.length === 0;
+  setHistoryAction(undo, pressHistory.length > 0);
+  setHistoryAction(redo, undonePresses.length > 0);
+  reset.disabled = pressHistory.length === 0 && undonePresses.length === 0;
   hint.disabled = lights === 0;
   const announcement = editing ? "逐盏设置亮灭，然后点「开始解题」。"
     : lights === 0 ? `全关了！用了 ${pressHistory.length} 次。` : message;
@@ -376,7 +386,7 @@ function puzzleUrl(mask) {
 function saveProgress() {
   const url = puzzleUrl(initial);
   const state = window.history.state;
-  const progress = {opening: url.search, presses: pressHistory};
+  const progress = {opening: url.search, presses: pressHistory, undone: undonePresses};
   let entry = {id: progressId};
   try {
     sessionStorage.setItem(progressKey, JSON.stringify(progress));
@@ -401,13 +411,14 @@ function readProgress() {
   }
 }
 
-function start(mask, message = "", previousPresses = []) {
+function start(mask, message = "", {presses = [], undone = []} = {}) {
   initial = mask;
-  pressHistory = previousPresses;
+  pressHistory = presses;
+  undonePresses = undone;
   lights = pressHistory.reduce((state, lamp) => state ^ windows[lamp], initial);
   draft = null;
   saveProgress();
-  render(pressHistory.length ? "已恢复上次进度。" : message);
+  render(pressHistory.length || undonePresses.length ? "已恢复上次进度。" : message);
 }
 
 async function sharePuzzle() {
@@ -432,10 +443,15 @@ function toggleLamp(i) {
     render();
     return;
   }
+  undonePresses = [];
+  playPress(i);
+}
+
+function playPress(i, message = "") {
   pressHistory.push(i);
   lights ^= windows[i];
   saveProgress();
-  render();
+  render(message);
 }
 
 function installBoard() {
@@ -551,9 +567,14 @@ document.getElementById("apply-edit").addEventListener("click", () => {
 reset.addEventListener("click", () => start(initial));
 undo.addEventListener("click", () => {
   if (pressHistory.length === 0) return;
-  lights ^= windows[pressHistory.pop()];
+  const lamp = pressHistory.pop();
+  undonePresses.push(lamp);
+  lights ^= windows[lamp];
   saveProgress();
   render("已撤销一步。");
+});
+redo.addEventListener("click", () => {
+  if (undonePresses.length > 0) playPress(undonePresses.pop(), "已重做一步。");
 });
 hint.addEventListener("click", () => {
   const presses = ruleControl.value === "spaced"
@@ -584,6 +605,12 @@ function sharedPuzzle(query) {
   return {size: count, rule, span: length, mask};
 }
 
+function validPresses(value) {
+  if (!Array.isArray(value)) return null;
+  const presses = [...value];
+  return presses.every(lamp => Number.isInteger(lamp) && lamp >= 0 && lamp < size) ? presses : null;
+}
+
 const query = new URLSearchParams(location.search);
 const shared = sharedPuzzle(query);
 if (shared) {
@@ -594,10 +621,9 @@ if (shared) {
   installBoard();
   const preset = size === 21 && shared.rule === "spaced" && shared.mask === challengePuzzle;
   const saved = readProgress();
-  const previousPresses = saved?.opening === puzzleUrl(shared.mask).search && Array.isArray(saved.presses)
-    ? [...saved.presses] : [];
-  const valid = previousPresses.every(lamp => Number.isInteger(lamp) && lamp >= 0 && lamp < size);
-  start(shared.mask, preset ? challengePrompt : "", valid ? previousPresses : []);
+  const presses = saved?.opening === puzzleUrl(shared.mask).search ? validPresses(saved.presses) : null;
+  const progress = presses ? {presses, undone: validPresses(saved.undone) ?? []} : undefined;
+  start(shared.mask, preset ? challengePrompt : "", progress);
 } else if (query.get("challenge") === "21") {
   startChallenge();
 } else {
