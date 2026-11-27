@@ -239,7 +239,15 @@ function render() {
   $("undo").disabled = history.length === 0;
   $("redo").disabled = undone.length === 0;
   $("reset").disabled = history.length === 0 && undone.length === 0;
-  $("status").textContent = won ? "排好了！用了 " + history.length + " 步。" : message;
+  const status = $("status");
+  if (won) {
+    const minimum = solver.hints.get(initial).remaining;
+    status.textContent = history.length === minimum
+      ? `排好了！用了 ${minimum} 步，达到了最少步数。`
+      : `排好了！用了 ${history.length} 步，这题最少 ${minimum} 步。`;
+  } else {
+    status.textContent = message;
+  }
 }
 
 function readProgress(opening) {
