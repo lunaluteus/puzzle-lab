@@ -93,9 +93,17 @@ function focusLinkedSection() {
 }
 
 function PointProbe({model, point, euclidean, setPoint}) {
+  const form = useRef(null);
   const metric = euclidean ? dihedralMetric(model) : null;
   const displayedPoint = point && metric ? metric.forward(point) : point;
+  const [x = "", y = ""] = displayedPoint ?? [];
   const coordinateLimit = Number.MAX_SAFE_INTEGER / 2;
+  useLayoutEffect(() => {
+    const fields = form.current.elements;
+    fields.namedItem("x").value = x;
+    fields.namedItem("y").value = y;
+  }, [point, euclidean, x, y]);
+
   let description = "Click the plane to probe a point. The marker snaps to nearby visible walls and limit rays.";
   if (point) {
     const result = probeRankTwo(model, point);
@@ -114,7 +122,7 @@ function PointProbe({model, point, euclidean, setPoint}) {
     <p className="point-probe" role="status">
       {displayedPoint && <b>({displayedPoint.map(x => Number(x.toFixed(3))).join(", ")}) · </b>}{description}
     </p>
-    <form className="probe-controls" aria-label="Probe coordinates" key={euclidean ? "euclidean" : "dual"}
+    <form className="probe-controls" aria-label="Probe coordinates" ref={form}
       onSubmit={event => {
         event.preventDefault();
         const fields = event.currentTarget.elements;
