@@ -50,6 +50,8 @@
   .meter strong { font-size: clamp(32px, 9vw, 60px); line-height: 1.15; color: var(--accent); }
   .meter span { font-size: 14px; color: var(--muted); }
   .meter #parity-preview { color: #9adcea; font-size: .8rem; }
+  #parity-inspection { margin-top: 8px; text-align: center; color: var(--muted); }
+  #parity-lamp { margin-inline-start: 8px; }
   button, select, input { font: inherit; }
   button { cursor: pointer; }
   header a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #daf2a6; outline-offset: 4px; }
@@ -117,10 +119,16 @@
     <p id="rule-description">点一盏灯，从它开始顺时针翻转连续几盏。试着关掉所有灯。</p>
   </header>
   <div class="layout">
-    <div id="board" class="board" role="group" aria-label="环上的灯" aria-describedby="rule-description">
-      <div class="meter">
-        <strong id="lit-count">0</strong><span>盏还亮着</span>
-        <span id="parity-preview" hidden></span>
+    <div>
+      <div id="board" class="board" role="group" aria-label="环上的灯" aria-describedby="rule-description">
+        <div class="meter">
+          <strong id="lit-count">0</strong><span>盏还亮着</span>
+          <span id="parity-preview" hidden></span>
+        </div>
+      </div>
+      <div id="parity-inspection" hidden>
+        <label for="parity-lamp">预览检查组</label>
+        <select id="parity-lamp"></select>
       </div>
     </div>
     <div class="panel">
@@ -290,6 +298,8 @@ const reset = document.getElementById("reset");
 const hint = document.getElementById("hint");
 const litCount = document.getElementById("lit-count");
 const parityPreview = document.getElementById("parity-preview");
+const parityInspection = document.getElementById("parity-inspection");
+const parityLamp = document.getElementById("parity-lamp");
 const moves = document.getElementById("moves");
 const playActions = document.getElementById("play-actions");
 const editActions = document.getElementById("edit-actions");
@@ -330,9 +340,11 @@ function fillSpanChoices(preferred) {
 
 function renderPreview() {
   const active = hoveredLamp ?? document.activeElement;
-  const index = lamps.indexOf(active);
-  const effect = draft === null && index !== -1 && (hoveredLamp || active.matches(":focus-visible"))
-    ? windows[index] : 0;
+  let index = lamps.indexOf(active);
+  if (index < 0 || (!hoveredLamp && !active.matches(":focus-visible"))) {
+    index = visibleParityGroup ? Number(parityLamp.value) - 1 : -1;
+  }
+  const effect = draft === null ? (windows[index] ?? 0) : 0;
   lamps.forEach((lamp, i) => lamp.classList.toggle("preview", Boolean(effect & (1 << i))));
   parityPreview.hidden = !effect || !visibleParityGroup;
   if (!parityPreview.hidden) parityPreview.textContent = `组内翻转 ${countBits(effect & visibleParityGroup)} 盏`;
@@ -349,6 +361,11 @@ function render(message = "", suggested = -1, parityGroup = 0) {
   shareUrl.hidden = true;
   const editing = draft !== null;
   const displayed = draft ?? lights;
+  if (parityGroup && parityGroup !== visibleParityGroup) {
+    parityLamp.replaceChildren(new Option("选择灯号", ""), ...windows.map((effect, i) =>
+      new Option(`${i + 1} 号灯 · 组内 ${countBits(effect & parityGroup)} 盏`, i + 1)));
+  }
+  parityInspection.hidden = !parityGroup;
   visibleParityGroup = parityGroup;
   lamps.forEach((lamp, i) => {
     const on = Boolean(displayed & (1 << i));
@@ -533,6 +550,10 @@ board.addEventListener("pointermove", event => {
   renderPreview();
 });
 board.addEventListener("pointerleave", () => {
+  hoveredLamp = null;
+  renderPreview();
+});
+parityLamp.addEventListener("change", () => {
   hoveredLamp = null;
   renderPreview();
 });
