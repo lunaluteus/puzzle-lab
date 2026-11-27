@@ -233,23 +233,28 @@ export function buildGallery(example) {
     return best;
   }
 
-  const origin = { word: "", rays: walls.map((_, i) => walls.map((_, j) => Number(i === j))), neighbors: {} };
+  const origin = {
+    word: "", rays: walls.map((_, i) => walls.map((_, j) => Number(i === j))), neighbors: {}, shortestRouteCount: 1
+  };
   const list = [origin];
   const byWord = new Map([["", origin]]);
   for (const chamber of list) {
     for (const [i, wall] of walls.entries()) {
       const word = normalForm(chamber.word + wall);
       if (word.length > example.max) continue;
-      if (!byWord.has(word)) {
+      let neighbor = byWord.get(word);
+      if (!neighbor) {
         // Right multiplication fixes every ray except the one opposite the crossed wall.
         const rays = chamber.rays.map((ray, j) => j !== i ? ray :
           ray.map((component, k) => chamber.rays.reduce((sum, column, l) =>
             sum + (l === i ? -component : -2 * example.gram[i][l] * column[k]), 0)));
-        const next = { word, rays, neighbors: {} };
-        byWord.set(word, next);
-        list.push(next);
+        neighbor = { word, rays, neighbors: {}, shortestRouteCount: 0 };
+        byWord.set(word, neighbor);
+        list.push(neighbor);
       }
       chamber.neighbors[wall] = word;
+      // The breadth-first traversal counts each outward crossing once per shortest route to its start.
+      if (word.length > chamber.word.length) neighbor.shortestRouteCount += chamber.shortestRouteCount;
     }
   }
   const countsByLength = Array(example.max + 1).fill(0);

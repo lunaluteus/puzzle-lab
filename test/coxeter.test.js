@@ -30,6 +30,19 @@ function sliceAngle(p, a, b, hyperbolic) {
   return Math.acos(Math.max(-1, Math.min(1, cosine)));
 }
 
+test("shortest gallery counts agree with the complete set of braid-equivalent words", () => {
+  for (const id of ["a1-cubed", "i25", "a1-i25", "h3", "hurwitz", "a1-i2-infinity"]) {
+    const model = exampleById.get(id);
+    for (const {word, shortestRouteCount} of buildGallery(model).list) {
+      const variants = new Set([word]);
+      for (const variant of variants) {
+        for (const {word: alternate} of braidMoves(variant, model)) variants.add(alternate);
+      }
+      assert.equal(shortestRouteCount, variants.size, id + " " + word);
+    }
+  }
+});
+
 for (const model of examples) {
   test(model.id + " respects the Coxeter relations and gallery walls", () => {
     const {list, byWord} = buildGallery(model);

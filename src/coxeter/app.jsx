@@ -348,11 +348,11 @@ function ShortestGallery({model, word, gallery, followingGallery, onStep, routeH
   useEffect(() => {
     if (followingGallery && details.current) details.current.open = true;
   }, [followingGallery]);
-  const {destination, steps, alternative, alternateSteps} = gallery;
+  const {destination, steps, alternative, alternateSteps, routeCount} = gallery;
   if (!destination) return null;
   const translation = model === affineDihedralProduct && (destination === "st" || destination === "ts");
   return <details className="gallery-route" ref={details}>
-    <summary>Shortest gallery</summary>
+    <summary>Shortest gallery · {routeCount} {routeCount === 1 ? "route" : "routes"}</summary>
     <GallerySteps route={destination} steps={steps} word={word} label="Shortest route" onStep={onStep} />
     {alternative ? <>
       <p>The braid relation <code>{destination.slice(alternative.index, alternative.index + alternative.length)}</code>
@@ -798,6 +798,7 @@ function App() {
   const routeHref = destination ? viewUrl({...view, word: "", destination, camera: null, point: null},
     model, pageUrl).href : null;
   const graph = buildGallery(model);
+  const routeCount = graph.byWord.get(destination).shortestRouteCount;
   const {value: alternative} = braidMoves(destination, model).next();
   const steps = gallerySteps(destination, graph.byWord);
   const alternateSteps = alternative ? gallerySteps(alternative.word, graph.byWord) : [];
@@ -881,7 +882,7 @@ function App() {
           camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
           fixedIdealVertex={fixedIdealVertex} setPoint={point => update({point})} setCamera={camera => update({camera})}
           choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} selectOpposite={selectOpposite} />
-        <ShortestGallery model={model} word={view.word} gallery={{destination, steps, alternative, alternateSteps}}
+        <ShortestGallery model={model} word={view.word} gallery={{destination, steps, alternative, alternateSteps, routeCount}}
           followingGallery={Boolean(view.destination)}
           onStep={word => update({word, destination})} routeHref={routeHref} idealGallery={idealGallery} />
         <CopyLink key={viewHref} href={viewHref} kind="View" copiedMessage="Link copied. It opens at the current chamber." />
