@@ -397,6 +397,12 @@ function render(message = "", suggested = -1, parityGroup = 0) {
       : "这个开局可解。设置好亮灭后，点「开始解题」。";
   } else if (lights === 0) {
     announcement = `全关了！用了 ${pressHistory.length} 次。`;
+  } else if (parityGroup) {
+    const labels = lamps.flatMap((_, i) => parityGroup & (1 << i) ? [i + 1] : []).join("、");
+    const litInGroup = countBits(lights & parityGroup);
+    const explanation = `这个开局无解。${labels} 号灯中有奇数盏亮着（当前 ${litInGroup} 盏）。`
+      + "每次操作会翻转其中偶数盏，亮灯数保持为奇数。全灭时这里应有 0 盏亮灯。";
+    announcement = message ? `${message} ${explanation}` : explanation;
   }
   if (status.textContent !== announcement) status.textContent = announcement;
   const rule = ruleControl.value === "spaced"
@@ -493,7 +499,7 @@ function playPress(i, message = "") {
   pressHistory.push(i);
   lights ^= windows[i];
   saveProgress();
-  render(message);
+  render(message, -1, visibleParityGroup);
 }
 
 function installBoard() {
@@ -622,7 +628,7 @@ undo.addEventListener("click", () => {
   undonePresses.push(lamp);
   lights ^= windows[lamp];
   saveProgress();
-  render("已撤销一步。");
+  render("已撤销一步。", -1, visibleParityGroup);
 });
 redo.addEventListener("click", () => {
   if (undonePresses.length > 0) playPress(undonePresses.pop(), "已重做一步。");
@@ -632,9 +638,7 @@ hint.addEventListener("click", event => {
     ? optimalSpacedPresses(lights, windows)
     : optimalPresses(lights, size, span);
   if (presses === null) {
-    const group = oddParityGroup(lights, windows);
-    const labels = lamps.flatMap((_, i) => group & (1 << i) ? [i + 1] : []).join("、");
-    render(`这个开局无解。${labels} 号灯中有奇数盏亮着。每次操作会翻转其中偶数盏，亮灯数保持为奇数。全灭时这里应有 0 盏亮灯。`, -1, group);
+    render("", -1, oddParityGroup(lights, windows));
     return;
   }
   if (presses === 0) return;
