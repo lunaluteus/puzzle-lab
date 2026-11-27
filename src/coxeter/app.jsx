@@ -264,7 +264,11 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
 
 function gallerySteps(route, byWord) {
   const steps = [""];
-  for (const wall of route) steps.push(byWord.get(steps.at(-1)).neighbors[wall]);
+  for (const wall of route) {
+    const next = byWord.get(steps.at(-1)).neighbors[wall];
+    if (next === undefined) break;
+    steps.push(next);
+  }
   return steps;
 }
 
@@ -430,14 +434,14 @@ function Controls({model, view, count, countsByLength, chartHref, neighbors, ide
         <select id="triangle-series" value={model.exponents[1][2]} onChange={event => {
           const choices = event.target.value === "3" ? triangleSeries : triangleSeriesWithFour;
           const sameOrder = choices.find(example => example.exponents[0][2] === model.exponents[0][2]);
-          changeModel((sameOrder ?? choices[0]).id, {preserveDepth: true});
+          changeModel((sameOrder ?? choices[0]).id, {preserveGallery: true});
         }}>
           <option value="3">(2, 3, m)</option>
           <option value="4">(2, 4, m)</option>
         </select>
         <label className="depth-label" htmlFor="triangle-order">Order m in (2, {model.exponents[1][2]}, m)</label>
         <select id="triangle-order" value={model.id}
-          onChange={event => changeModel(event.target.value, {preserveDepth: true})}>
+          onChange={event => changeModel(event.target.value, {preserveGallery: true})}>
           {triangleOptions.map(example => <option key={example.id} value={example.id}>
             {orderLabel(example.exponents[0][2])}
           </option>)}
@@ -783,11 +787,12 @@ function App() {
     choose(oppositeSphericalChamber(model, chamber).word);
     update({camera: null});
   };
-  const changeModel = (id, {preserveDepth = false} = {}) => {
+  const changeModel = (id, {preserveGallery = false} = {}) => {
     const next = exampleById.get(id);
     setView(current => ({
-      ...current, id, word: "", destination: null, zoom: 1, camera: null, point: null,
-      depth: preserveDepth ? Math.min(current.depth, next.max) : next.depth
+      ...current, id, destination: null, zoom: 1, camera: null, point: null,
+      word: preserveGallery ? gallerySteps(current.word, buildGallery(next).byWord).at(-1) : "",
+      depth: preserveGallery ? Math.min(current.depth, next.max) : next.depth
     }));
   };
   const changeCoupling = id => {
