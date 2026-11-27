@@ -62,7 +62,7 @@
   <header>
     <a href="index.html">回谜题桌</a>
     <h1>三格轮转</h1>
-    <p>把数字排成从小到大的顺序。每次选相邻三格，整体向左或向右轮转一格。</p>
+    <p>把数字排成从小到大的顺序。每次选相邻三格，整体向左或向右轮转一格。<span id="group-keys">用左右方向键选组，Home 和 End 跳到首尾。</span></p>
   </header>
   <div class="controls">
     <label>数字个数<select id="size">
@@ -72,7 +72,7 @@
   </div>
   <section class="table" aria-label="轮转棋盘">
     <div class="tiles" id="tiles" role="list" aria-label="当前数字顺序"></div>
-    <div class="groups" id="groups" role="group" aria-label="选择哪三格"></div>
+    <div class="groups" id="groups" role="group" aria-label="选择哪三格" aria-describedby="group-keys"></div>
     <div class="rotate">
       <button id="left" type="button">向左轮转<span class="rotation-preview" aria-hidden="true"></span></button>
       <button id="right" type="button">向右轮转<span class="rotation-preview" aria-hidden="true"></span></button>
@@ -167,6 +167,23 @@ function install(size, requested = null) {
       message = "";
       render();
     });
+    button.addEventListener("keydown", event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const last = groupButtons.length - 1;
+      let next;
+      switch (event.key) {
+        case "ArrowLeft": next = Math.max(0, i - 1); break;
+        case "ArrowRight": next = Math.min(last, i + 1); break;
+        case "Home": next = 0; break;
+        case "End": next = last; break;
+        default: return;
+      }
+      event.preventDefault();
+      if (next === i) return;
+      const target = groupButtons[next];
+      target.click();
+      target.focus();
+    });
     return button;
   });
   tiles.replaceChildren(...tileElements);
@@ -198,7 +215,9 @@ function render() {
     tile.classList.toggle("selected", !won && i >= first && i < first + 3);
   });
   groupButtons.forEach((button, i) => {
-    button.setAttribute("aria-pressed", String(!won && first === i));
+    const selected = !won && first === i;
+    button.setAttribute("aria-pressed", String(selected));
+    button.tabIndex = selected ? 0 : -1;
     button.disabled = won;
   });
   for (const direction of Object.keys(directions)) {
