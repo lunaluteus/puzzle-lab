@@ -49,6 +49,7 @@
   .meter { position: absolute; inset: 34%; display: grid; place-content: center; text-align: center; }
   .meter strong { font-size: clamp(32px, 9vw, 60px); line-height: 1.15; color: var(--accent); }
   .meter span { font-size: 14px; color: var(--muted); }
+  .meter #parity-preview { color: #9adcea; font-size: .8rem; }
   button, select, input { font: inherit; }
   button { cursor: pointer; }
   header a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #daf2a6; outline-offset: 4px; }
@@ -117,7 +118,10 @@
   </header>
   <div class="layout">
     <div id="board" class="board" role="group" aria-label="环上的灯" aria-describedby="rule-description">
-      <div class="meter"><strong id="lit-count">0</strong><span>盏还亮着</span></div>
+      <div class="meter">
+        <strong id="lit-count">0</strong><span>盏还亮着</span>
+        <span id="parity-preview" hidden></span>
+      </div>
     </div>
     <div class="panel">
       <div class="rules">
@@ -285,6 +289,7 @@ const redo = document.getElementById("redo");
 const reset = document.getElementById("reset");
 const hint = document.getElementById("hint");
 const litCount = document.getElementById("lit-count");
+const parityPreview = document.getElementById("parity-preview");
 const moves = document.getElementById("moves");
 const playActions = document.getElementById("play-actions");
 const editActions = document.getElementById("edit-actions");
@@ -309,6 +314,7 @@ let undonePresses = [];
 let lamps = [];
 let windows = [];
 let hoveredLamp = null;
+let visibleParityGroup = 0;
 let shareRevision = 0;
 
 function fillSpanChoices(preferred) {
@@ -328,6 +334,8 @@ function renderPreview() {
   const effect = draft === null && index !== -1 && (hoveredLamp || active.matches(":focus-visible"))
     ? windows[index] : 0;
   lamps.forEach((lamp, i) => lamp.classList.toggle("preview", Boolean(effect & (1 << i))));
+  parityPreview.hidden = !effect || !visibleParityGroup;
+  if (!parityPreview.hidden) parityPreview.textContent = `组内翻转 ${countBits(effect & visibleParityGroup)} 盏`;
 }
 
 function setHistoryAction(button, available) {
@@ -341,13 +349,16 @@ function render(message = "", suggested = -1, parityGroup = 0) {
   shareUrl.hidden = true;
   const editing = draft !== null;
   const displayed = draft ?? lights;
+  visibleParityGroup = parityGroup;
   lamps.forEach((lamp, i) => {
     const on = Boolean(displayed & (1 << i));
     const inGroup = Boolean(parityGroup & (1 << i));
     const recommended = i === suggested;
     const description = editing ? "只切换这一盏灯" : lamp.dataset.playDescription;
+    const annotation = recommended ? "建议按这盏灯。" : parityGroup
+      ? `会翻转检查组中的 ${countBits(windows[i] & parityGroup)} 盏。` : "";
     lamp.setAttribute("aria-label", `${i + 1} 号灯${inGroup ? "，奇偶性检查组" : ""}`);
-    lamp.setAttribute("aria-description", recommended ? `建议按这盏灯。${description}` : description);
+    lamp.setAttribute("aria-description", annotation + description);
     lamp.setAttribute("aria-pressed", String(on));
     lamp.classList.toggle("hint", recommended);
     lamp.classList.toggle("parity", inGroup);
