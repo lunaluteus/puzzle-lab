@@ -85,6 +85,7 @@
   }
   .operators button:not(:disabled):hover, .operators button.hinted { background: var(--paper); color: var(--ink); }
   #status { margin: 14px 0 0; min-height: 24px; }
+  #solution { margin: 10px 0 0; color: #dce7dc; overflow-wrap: anywhere; }
   #steps { margin: 10px 0 0; padding-left: 1.5em; color: #dce7dc; overflow-wrap: anywhere; }
   #steps:empty { display: none; }
   .actions { margin-top: 16px; }
@@ -110,6 +111,7 @@
     <div class="cards" id="cards"></div>
     <div class="operators" id="operators" aria-label="运算"></div>
     <p id="status" role="status"></p>
+    <p id="solution" hidden><strong>完整算式</strong> <span id="solution-expression"></span></p>
     <ol id="steps" aria-label="计算步骤"></ol>
   </section>
   <div class="actions">
@@ -219,11 +221,16 @@ function operationText(left, right, op) {
   return `${value(tiles[left])} ${signs[op]} ${value(tiles[right])}`;
 }
 
+function operandExpression(tile) {
+  return tile.expression ? `(${tile.expression})` : value(tile);
+}
+
 function recordMove(left, right, op, result) {
   const expression = operationText(left, right, op) + " = " + value(result);
+  const combinedExpression = `${operandExpression(tiles[left])} ${signs[op]} ${operandExpression(tiles[right])}`;
   history.push(tiles);
   steps.push({left, right, op, expression});
-  tiles = merge(tiles, left, right, result);
+  tiles = merge(tiles, left, right, {...result, expression: combinedExpression});
   return expression;
 }
 
@@ -380,9 +387,12 @@ function renderProgress() {
 }
 
 function render() {
+  const won = tiles.length === 1 && isGoal(tiles[0]);
   $("puzzle").value = String(puzzleIndex);
   $("status").textContent = message;
-  $("hint").disabled = tiles.length === 1 && isGoal(tiles[0]);
+  $("solution").hidden = !won;
+  $("solution-expression").textContent = won ? `${tiles[0].expression} = 24` : "";
+  $("hint").disabled = won;
   $("undo").disabled = history.length === 0;
   $("reset").disabled = history.length === 0 && selection.length === 0;
   $("steps").replaceChildren(...steps.map(({expression}) => {
