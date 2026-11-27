@@ -3,7 +3,7 @@ import test from "node:test";
 import { coxeterMath } from "../scripts/coxeter-mathjax.js";
 import {
   affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, dihedralMetric, dihedralModels,
-  dihedralProductModels, exampleById, examples, limitRays, presets,
+  dihedralProductModels, exampleById, examples, idealVertexIndices, limitRays, presets,
   probeRankTwo, reflect, slice, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, vertexAngles, wallNames
 } from "../src/coxeter/model.js";
 import { clipHemisphere, decodeSphereCamera, encodeSphereCamera, rotateSphereCamera, sphereCamera } from "../src/coxeter/spherical.js";
@@ -321,10 +321,13 @@ test("the two-cusp series varies its interior angle and preserves the ideal endp
     const m = model.exponents[0][1];
     assert.deepEqual(model.exponents, [[1, m, Infinity], [m, 1, Infinity], [Infinity, Infinity, 1]]);
     assert.deepEqual(vertexAngles(model), [0, 0, Math.PI / m]);
+    assert.deepEqual(idealVertexIndices(model), m === Infinity ? [0, 1, 2] : [0, 1]);
     assert.equal(exampleById.get(model.id), model);
   }
   assert.equal(exampleFormulae(twoCuspSeries[0]).area, "\\frac{\\pi}{2}");
   assert.equal(exampleFormulae(exampleById.get("triangle-two-cusps-24")).area, "\\frac{23\\pi}{24}");
+  assert.deepEqual(idealVertexIndices(exampleById.get("one-cusp")), [1]);
+  assert.deepEqual(idealVertexIndices(exampleById.get("hurwitz")), []);
 });
 
 test("finite dihedral products have 4m chambers and preserve preset links", () => {

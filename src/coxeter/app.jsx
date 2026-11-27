@@ -2,7 +2,7 @@ import React, { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useS
 import { createRoot } from "react-dom/client";
 import {
   affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels,
-  dihedralProductModels, exampleById, infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder,
+  dihedralProductModels, exampleById, idealVertexIndices, infiniteDihedralModels, limitRays, maxDihedralOrder, maxTriangleOrder,
   presets, probeRankTwo, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, wallNames
 } from "./model.js";
 import { exampleFormulae, inspectorMath, mathNotes } from "./formulas.js";
@@ -207,6 +207,7 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
       <span><i className="selected" /> Selected chamber</span>
       {(model.family === "Hyperbolic" || limitRays(model)) &&
         <span id="limit-key"><i className="limit" /> Limit boundary</span>}
+      {idealVertexIndices(model).length > 0 && <span><i className="ideal-corner" /> Selected ideal vertices</span>}
       {spherical && <span className="sphere-controls">
         Drag or use arrow keys to rotate.
         <button type="button" disabled={!camera} onClick={() => setCamera(null)}>Center on selection</button>
@@ -519,6 +520,7 @@ function Formula(props) {
 function Inspector({model, coordinates, chamber}) {
   const {relations, matrix, eigenvalues, angles, angleSum, area, covector, angle} = exampleFormulae(model);
   const spherical = model.family === "Spherical";
+  const idealCount = idealVertexIndices(model).length;
   const strip = model === affineDihedralProduct ? affineProductStrip(chamber) : null;
   const signature = {"Finite line": "Positive definite", "Finite dihedral": "Positive definite", Spherical: "Positive definite",
     Affine: "Positive semidefinite", Indefinite: "Signature (1, 1)", Hyperbolic: "Signature (2, 1)"};
@@ -546,7 +548,10 @@ function Inspector({model, coordinates, chamber}) {
           the line <Formula latex={inspectorMath.affineProductLine} /> at height zero.</p>
       </>
       : angles ? <>
-        <p>Intrinsic corner angles <Formula latex={angles} /></p>
+        <p>Intrinsic corner angles <Formula latex={angles} />, in wall-pair order{" "}
+          <var>t–u</var>, <var>u–s</var>, <var>s–t</var>.</p>
+        {idealCount > 0 && <p>The selected chamber has {idealCount} ideal {idealCount === 1 ? "vertex" : "vertices"}
+          {" "}on the boundary circle, with angle zero.</p>}
         <p>Angle sum <Formula latex={angleSum} label="Triangle angle sum" />.</p>
         {model.family === "Hyperbolic" &&
           <p>Hyperbolic area <Formula latex={area} /> at curvature −1.</p>}

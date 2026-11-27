@@ -1,4 +1,4 @@
-import { affineDihedralProduct, affineProductStrip, dihedralMetric, limitRays, slice, symbols } from "./model.js";
+import { affineDihedralProduct, affineProductStrip, dihedralMetric, idealVertexIndices, limitRays, slice, symbols } from "./model.js";
 import { drawSphere } from "./spherical.js";
 
 const tau = 2 * Math.PI;
@@ -387,17 +387,21 @@ export function drawPlot(plot, model, chambers, word, {
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.setLineDash([]);
-    for (const chamber of chambers) {
-      for (const ray of chamber.rays) {
-        const point = project(ray);
-        if (Math.abs(Math.hypot(...point) - 1) > 1e-9) continue;
-        const [x, y] = display(point);
+    const idealVertices = idealVertexIndices(model);
+    if (!idealVertices.length) return;
+    function paintIdealVertices(chamber, radius, color) {
+      ctx.fillStyle = color;
+      for (const index of idealVertices) {
+        const [x, y] = display(project(chamber.rays[index]));
         ctx.beginPath();
-        ctx.arc(x, y, 1.6, 0, tau);
-        ctx.fillStyle = chamber.word === word ? "#ffe2a7" : palette.line;
+        ctx.arc(x, y, radius, 0, tau);
         ctx.fill();
       }
     }
+    for (const chamber of chambers) {
+      if (chamber.word !== word) paintIdealVertices(chamber, 1.6, palette.line);
+    }
+    paintIdealVertices(chambers.find(chamber => chamber.word === word), 3.5, "#ffe2a7");
   }
 
 

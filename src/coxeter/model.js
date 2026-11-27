@@ -323,6 +323,11 @@ export function vertexAngles(example) {
   return [[1, 2], [2, 0], [0, 1]].map(([i, j]) => Math.PI / example.exponents[i][j]);
 }
 
+export function idealVertexIndices(example) {
+  if (example.family !== "Hyperbolic") return [];
+  return vertexAngles(example).flatMap((angle, index) => angle === 0 ? [index] : []);
+}
+
 export function limitRays(example) {
   if (example.rank !== 2) return null;
   const c = -example.gram[0][1];
