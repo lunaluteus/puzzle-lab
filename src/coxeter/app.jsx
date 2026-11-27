@@ -33,13 +33,10 @@ function readViewFromUrl() {
   const {byWord} = buildGallery(model);
   function readChamberWord(parameter) {
     const route = query.get(parameter);
-    if (!route || route.length > model.max) return "";
-    const word = gallerySteps(route, byWord).at(-1);
-    // A full shortest route has the same length as its canonical chamber word.
-    return word.length === route.length ? word : "";
+    return route && route.length <= model.max ? resolveReducedWord(route, byWord) : null;
   }
-  const word = readChamberWord("word");
-  const destination = readChamberWord("destination") || null;
+  const word = readChamberWord("word") ?? "";
+  const destination = readChamberWord("destination");
   const budgetDepth = Number.isInteger(budget) ? Math.min(budget, model.max) : model.depth;
   const depth = Math.max(word.length, destination?.length ?? 0, budgetDepth);
   const requestedZoom = Number(query.get("zoom"));
@@ -278,6 +275,13 @@ function gallerySteps(route, byWord) {
     steps.push(next);
   }
   return steps;
+}
+
+function resolveReducedWord(route, byWord) {
+  if (!route) return null;
+  const word = gallerySteps(route, byWord).at(-1);
+  // A full shortest route has the same length as its canonical chamber word.
+  return word.length === route.length ? word : null;
 }
 
 function GallerySteps({route, steps, word, label, onStep}) {
@@ -804,9 +808,11 @@ function App() {
   };
   const changeModel = (id, {preserveGallery = false} = {}) => {
     const next = exampleById.get(id);
+    const nextGallery = preserveGallery ? buildGallery(next).byWord : null;
     setView(current => ({
-      ...current, id, destination: null, zoom: 1, camera: null, point: null,
-      word: preserveGallery ? gallerySteps(current.word, buildGallery(next).byWord).at(-1) : "",
+      ...current, id, zoom: 1, camera: null, point: null,
+      word: nextGallery ? gallerySteps(current.word, nextGallery).at(-1) : "",
+      destination: nextGallery ? resolveReducedWord(current.destination, nextGallery) : null,
       depth: preserveGallery ? Math.min(current.depth, next.max) : next.depth
     }));
   };
