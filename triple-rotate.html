@@ -168,6 +168,10 @@ function install(size, requested = null) {
   const maximum = solver.hints.get(solver.states.at(-1)).remaining;
   const difficulties = Array.from({length: maximum}, (_, i) => new Option("最少 " + (i + 1) + " 步", i + 1));
   difficultyControl.replaceChildren(new Option("不限", ""), ...difficulties);
+  if (requested !== null) {
+    const savedDifficulty = window.history.state?.tripleRotateDifficulty;
+    if (difficulties.some(option => option.value === savedDifficulty)) difficultyControl.value = savedDifficulty;
+  }
   const columns = n => "repeat(" + n + ", minmax(0, 1fr))";
   tiles.style.gridTemplateColumns = columns(size);
   groups.style.gridTemplateColumns = columns(size - 2);
@@ -293,9 +297,11 @@ function saveProgress() {
   const url = puzzleUrl(initial);
   const state = window.history.state;
   const progress = history.length || undone.length ? {initial, board, first, history, undone} : null;
-  if (!progress && !state?.tripleRotate && url.href === location.href) return;
+  const difficulty = difficultyControl.value;
+  const difficultyChanged = (state?.tripleRotateDifficulty ?? "") !== difficulty;
+  if (!progress && !state?.tripleRotate && !difficultyChanged && url.href === location.href) return;
   try {
-    window.history.replaceState({...state, tripleRotate: progress}, "", url);
+    window.history.replaceState({...state, tripleRotate: progress, tripleRotateDifficulty: difficulty}, "", url);
   } catch {
     // Play can continue when the browser blocks history updates.
   }
@@ -382,6 +388,7 @@ $("new").addEventListener("click", () => {
   if (choices.length) start(choices[Math.floor(Math.random() * choices.length)]);
   else start(initial, "这个难度只有这一题，已重新开局。");
 });
+difficultyControl.addEventListener("change", saveProgress);
 sizeControl.addEventListener("change", () => install(Number(sizeControl.value)));
 const requestedBoard = new URLSearchParams(location.search).get("board");
 const requestedSize = String(requestedBoard?.length);
