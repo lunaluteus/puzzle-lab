@@ -1,7 +1,7 @@
 import React, { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, couplingLabel, dihedralMetric, dihedralModels,
+  affineDihedralProduct, affineProductStrip, alternateReducedWords, buildGallery, couplingLabel, dihedralMetric, dihedralModels,
   dihedralProductModels, exampleById, idealVertexGallery, idealVertexIndices, infiniteDihedralModels, limitRays,
   maxDihedralOrder, maxTriangleOrder, oppositeSphericalChamber, presets, probeRankTwo, sphere, triangleSeries,
   triangleSeriesWithFour, twoCuspSeries, wallNames
@@ -343,21 +343,29 @@ function CopyLink({href, kind, copiedMessage}) {
   </>;
 }
 
-function ShortestGallery({model, word, gallery, followingGallery, onStep, routeHref, idealGallery}) {
+function ShortestGallery({model, word, gallery, followingGallery, onStep, onAlternate, routeHref, idealGallery}) {
   const details = useRef(null);
   useEffect(() => {
     if (followingGallery && details.current) details.current.open = true;
   }, [followingGallery]);
-  const {destination, steps, alternative, alternateSteps, routeCount} = gallery;
+  const {destination, steps, alternative, alternatives, alternateSteps, routeCount} = gallery;
   if (!destination) return null;
   const translation = model === affineDihedralProduct && (destination === "st" || destination === "ts");
   return <details className="gallery-route" ref={details}>
     <summary>Shortest gallery · {routeCount} {routeCount === 1 ? "route" : "routes"}</summary>
     <GallerySteps route={destination} steps={steps} word={word} label="Shortest route" onStep={onStep} />
     {alternative ? <>
-      <p>The braid relation <code>{destination.slice(alternative.index, alternative.index + alternative.length)}</code>
+      {alternatives.length > 1 && <>
+        <label className="depth-label" htmlFor="alternate-route">Alternate shortest route</label>
+        <select id="alternate-route" value={alternative.word} onChange={event => onAlternate(event.target.value)}>
+          {alternatives.map(({word}, index) => <option key={word} value={word}>
+            {index + 2}. {word.split("").join(" ")}
+          </option>)}
+        </select>
+      </>}
+      {alternative === alternatives[0] && <p>The braid relation <code>{destination.slice(alternative.index, alternative.index + alternative.length)}</code>
         {" = "}<code>{alternative.word.slice(alternative.index, alternative.index + alternative.length)}</code>
-        {" "}gives another route to the same chamber in the same number of steps.</p>
+        {" "}gives another route to the same chamber in the same number of steps.</p>}
       <GallerySteps route={alternative.word} steps={alternateSteps} word={word} label="Alternate shortest route" onStep={onStep} />
       {model === affineDihedralProduct && (destination === "su" || destination === "tu") &&
         <p>One step crosses a vertical wall and the other crosses xᵤ = 0. Try both routes to see the
@@ -785,6 +793,7 @@ function Notes({notesRef}) {
 
 function App() {
   const [view, setView] = useState(readViewFromUrl);
+  const [alternateWord, setAlternateWord] = useState(null);
   const viewSearch = useRef(location.search);
   const notes = useRef(null);
   const model = exampleById.get(view.id);
@@ -799,7 +808,8 @@ function App() {
     model, pageUrl).href : null;
   const graph = buildGallery(model);
   const routeCount = graph.byWord.get(destination).shortestRouteCount;
-  const {value: alternative} = braidMoves(destination, model).next();
+  const alternatives = useMemo(() => [...alternateReducedWords(destination, model)], [destination, model]);
+  const alternative = alternatives.find(route => route.word === alternateWord) ?? alternatives[0];
   const steps = gallerySteps(destination, graph.byWord);
   const alternateSteps = alternative ? gallerySteps(alternative.word, graph.byWord) : [];
   const chambers = useMemo(() => graph.list.filter(chamber => chamber.word.length <= view.depth),
@@ -882,8 +892,9 @@ function App() {
           camera={view.camera} projection={view.projection} coordinates={view.coordinates} point={view.point}
           fixedIdealVertex={fixedIdealVertex} setPoint={point => update({point})} setCamera={camera => update({camera})}
           choose={choose} cross={wall => choose(neighbors[wall])} neighbors={neighbors} selectOpposite={selectOpposite} />
-        <ShortestGallery model={model} word={view.word} gallery={{destination, steps, alternative, alternateSteps, routeCount}}
-          followingGallery={Boolean(view.destination)}
+        <ShortestGallery model={model} word={view.word}
+          gallery={{destination, steps, alternative, alternatives, alternateSteps, routeCount}}
+          followingGallery={Boolean(view.destination)} onAlternate={setAlternateWord}
           onStep={word => update({word, destination})} routeHref={routeHref} idealGallery={idealGallery} />
         <CopyLink key={viewHref} href={viewHref} kind="View" copiedMessage="Link copied. It opens at the current chamber." />
       </div>

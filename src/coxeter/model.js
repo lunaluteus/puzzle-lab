@@ -207,6 +207,17 @@ export function* braidMoves(word, example) {
   }
 }
 
+export function* alternateReducedWords(word, example) {
+  const seen = new Set([word]);
+  for (const route of seen) {
+    for (const move of braidMoves(route, example)) {
+      if (seen.has(move.word)) continue;
+      seen.add(move.word);
+      yield move;
+    }
+  }
+}
+
 export function buildGallery(example) {
   if (galleryCache.has(example)) return galleryCache.get(example);
   const walls = wallNames(example);

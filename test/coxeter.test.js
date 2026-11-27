@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { coxeterMath } from "../scripts/coxeter-mathjax.js";
 import {
-  affineDihedralProduct, affineProductStrip, braidMoves, buildGallery, dihedralMetric, dihedralModels,
+  affineDihedralProduct, affineProductStrip, alternateReducedWords, braidMoves, buildGallery, dihedralMetric, dihedralModels,
   dihedralProductModels, exampleById, examples, idealVertexGallery, idealVertexIndices, limitRays, oppositeSphericalChamber, presets,
   probeRankTwo, reflect, slice, sphere, triangleSeries, triangleSeriesWithFour, twoCuspSeries, vertexAngles, wallNames
 } from "../src/coxeter/model.js";
@@ -33,12 +33,17 @@ function sliceAngle(p, a, b, hyperbolic) {
 test("shortest gallery counts agree with the complete set of braid-equivalent words", () => {
   for (const id of ["a1-cubed", "i25", "a1-i25", "h3", "hurwitz", "a1-i2-infinity"]) {
     const model = exampleById.get(id);
-    for (const {word, shortestRouteCount} of buildGallery(model).list) {
-      const variants = new Set([word]);
-      for (const variant of variants) {
-        for (const {word: alternate} of braidMoves(variant, model)) variants.add(alternate);
+    const {list, byWord} = buildGallery(model);
+    for (const {word, shortestRouteCount} of list) {
+      const routes = [word, ...Array.from(alternateReducedWords(word, model), route => route.word)];
+      assert.equal(routes.length, shortestRouteCount, id + " " + word);
+      assert.equal(new Set(routes).size, routes.length);
+      for (const route of routes) {
+        assert.equal(route.length, word.length);
+        let chamber = "";
+        for (const wall of route) chamber = byWord.get(chamber).neighbors[wall];
+        assert.equal(chamber, word, id + " " + route);
       }
-      assert.equal(shortestRouteCount, variants.size, id + " " + word);
     }
   }
 });
