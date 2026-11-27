@@ -209,7 +209,7 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
       <span><i className="fundamental" /> Fundamental chamber</span>
       <span><i className="selected" /> Selected chamber</span>
       {(model.family === "Hyperbolic" || limitRays(model)) &&
-        <span id="limit-key"><i className="limit" /> Limit boundary</span>}
+        <span id="limit-key"><i className="limit" /> {model.family === "Hyperbolic" ? "Circle at infinity" : "Limit rays"}</span>}
       {idealVertexIndices(model).length > 0 && <span><i className="ideal-corner" /> Selected ideal vertices</span>}
       {fixedIdealVertex !== null && <span><i className="fixed-ideal-corner" /> Fixed ideal vertex</span>}
       {spherical && <span className="sphere-controls">
@@ -698,9 +698,10 @@ function Notes({notesRef}) {
     <p>For a finite rank-three example, normalize each positive ray using the dual metric <NoteFormula latex={inspectorMath.sphere} />.
       The resulting unit sphere is tiled by spherical triangles. The drawing shows one hemisphere.
       For affine and hyperbolic triangle examples, h is the positive unit eigenvector for the smallest eigenvalue of B.
-      The slice <NoteFormula latex={inspectorMath.slice} /> is Euclidean in affine type and gives the Klein disk in hyperbolic type.
-      A hyperbolic boundary point belongs to the sliced cone exactly when it is an ideal vertex of a chamber.
-      The dashed boundary indicates the circle or limiting rays. The gallery depth controls how many chambers are drawn.</p>
+      The slice <NoteFormula latex={inspectorMath.slice} /> is Euclidean in affine type.
+      In hyperbolic type, the open Klein disk models the hyperbolic plane. Each closed chamber triangle meets
+      the circle at infinity only at its ideal vertices, so those vertices belong to the sliced Tits cone.
+      The gallery depth controls how many chambers are drawn.</p>
     <p>Klein geodesics appear as straight chords. At an interior point p, measure angles using the
       hyperbolic inner product <NoteFormula latex={mathNotes.kleinMetric} />.
       Switch to the Poincaré disk to see the same chambers with their angles preserved.

@@ -77,7 +77,7 @@ export const presets = [
     "A 30°–60°–90° fundamental triangle tiles the Euclidean slice."),
   affineDihedralProduct,
   triangle("hurwitz", "Triangle · (2, 3, 7)", "Hyperbolic", [2, 3, 7],
-    "A compact triangle with a small angle defect. The projective slice is the open Klein disk."),
+    "A compact triangle with a small angle defect."),
   triangle("compact-245", "Triangle · (2, 4, 5)", "Hyperbolic", [2, 4, 5],
     "A compact right triangle. Its chambers accumulate at the excluded circle."),
   triangle("compact-334", "Triangle · (3, 3, 4)", "Hyperbolic", [3, 3, 4],
@@ -89,7 +89,7 @@ export const presets = [
   triangle("two-cusps", "Triangle · (3, ∞, ∞)", "Hyperbolic", [3, Infinity, Infinity],
     "Two ideal corners and one interior corner."),
   triangle("ideal", "Triangle · (∞, ∞, ∞)", "Hyperbolic", [Infinity, Infinity, Infinity],
-    "An ideal triangle with all three corners on the circle. Ideal vertices of reflected chambers belong to the slice.")
+    "All three corners lie on the circle at infinity. They belong to the sliced Tits cone.")
 ];
 
 export function gcd(a, b) {
