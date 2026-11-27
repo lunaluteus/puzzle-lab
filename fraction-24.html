@@ -215,6 +215,10 @@ const prompt = "选两张牌开始。减法和除法按选择顺序算。";
 let puzzleIndex = 0;
 let tiles, selection, history, steps, hintedOperator, message;
 
+function operationText(left, right, op) {
+  return `${value(tiles[left])} ${signs[op]} ${value(tiles[right])}`;
+}
+
 function selectTile(index) {
   if (selection.includes(index)) {
     selection = selection.filter(i => i !== index);
@@ -224,9 +228,10 @@ function selectTile(index) {
     selection = [selection[0], index];
   }
   hintedOperator = null;
+  const [left, right] = selection.map(i => value(tiles[i]));
   message = selection.length === 2
-    ? "用 " + value(tiles[selection[0]]) + " 和 " + value(tiles[selection[1]]) + " 做什么运算？"
-    : selection.length ? "再选一张牌。" : prompt;
+    ? `先选 ${left}，再选 ${right}。请选择运算。`
+    : selection.length ? `先选了 ${left}。再选一张牌。` : prompt;
   render();
 }
 
@@ -240,7 +245,7 @@ function apply(op) {
     return;
   }
   history.push(tiles);
-  const expression = value(tiles[left]) + " " + signs[op] + " " + value(tiles[right]) + " = " + value(result);
+  const expression = operationText(left, right, op) + " = " + value(result);
   steps.push(expression);
   tiles = merge(tiles, left, right, result);
   selection = [];
@@ -318,7 +323,7 @@ function hint(event) {
     const { left, right, op } = move;
     selection = [left, right];
     hintedOperator = op;
-    message = "试试 " + value(tiles[left]) + " " + signs[op] + " " + value(tiles[right]) + "。";
+    message = "试试 " + operationText(left, right, op) + "。";
     focusTarget = operatorButtons[op];
   }
   render();
@@ -368,6 +373,8 @@ function render() {
     button.disabled = tiles.length === 1 || !tile;
     const order = selection.indexOf(index);
     button.setAttribute("aria-pressed", String(order !== -1));
+    if (order < 0) button.removeAttribute("aria-description");
+    else button.setAttribute("aria-description", `第 ${order + 1} 个操作数`);
     if (!tile) return;
 
     const rank = document.createElement("span");
@@ -384,13 +391,14 @@ function render() {
     button.setAttribute("aria-label", "第 " + (index + 1) + " 张牌，" + value(tile));
   });
 
+  const ready = selection.length === 2;
+  const [left, right] = selection;
   operatorButtons.forEach((button, op) => {
-    button.disabled = selection.length !== 2;
+    button.disabled = !ready;
     const recommended = op === hintedOperator;
     button.classList.toggle("hinted", recommended);
-    if (recommended) {
-      const [left, right] = selection;
-      button.setAttribute("aria-description", `建议计算 ${value(tiles[left])} ${signs[op]} ${value(tiles[right])}`);
+    if (ready) {
+      button.setAttribute("aria-description", (recommended ? "建议计算 " : "计算 ") + operationText(left, right, op));
     } else button.removeAttribute("aria-description");
   });
 }
