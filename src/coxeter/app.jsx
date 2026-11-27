@@ -261,7 +261,8 @@ function Plot({model, chambers, word, zoom, camera, projection, coordinates, poi
       {fixedIdealVertex !== null && <span><i className="fixed-ideal-corner" /> Fixed ideal vertex</span>}
       {spherical && <span className="sphere-controls">
         Drag or use arrow keys to rotate.
-        <button type="button" disabled={!camera} onClick={() => setCamera(null)}>Center on selection</button>
+        <button type="button" aria-disabled={!camera} tabIndex={camera ? 0 : -1}
+          onClick={() => { if (camera) setCamera(null); }}>Center on selection</button>
         <button type="button" onClick={selectOpposite}>Select opposite chamber</button>
       </span>}
     </figcaption>
